@@ -2483,44 +2483,6 @@ ul {
     color: #ffffff;
 }
 
-.btn-puzzle {
-    background: linear-gradient(135deg, #4ea8de 0%, #6ee7f2 100%);
-    color: #ffffff;
-    border: 1px solid #2f8fc4;
-    flex-shrink: 0;
-    white-space: nowrap;
-}
-
-.btn-puzzle:hover {
-    background: linear-gradient(135deg, #2f8fc4 0%, #4ea8de 100%);
-    color: #ffffff;
-}
-
-.puzzle-cta-banner {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 18px;
-    flex-wrap: wrap;
-    padding: 22px 26px;
-    border-radius: var(--radius-md);
-    background: linear-gradient(135deg, #eff9ff 0%, #fff7ed 100%);
-    border: 1px solid #bae6fd;
-}
-
-.puzzle-cta-text h3 {
-    font-size: 1.05rem;
-    font-weight: 800;
-    color: #0c4a6e;
-    margin-bottom: 6px;
-}
-
-.puzzle-cta-text p {
-    font-size: 0.88rem;
-    color: #475569;
-    line-height: 1.55;
-    margin: 0;
-}
 
 /* 7-5. 안시/배너 카드 */
 .info-banner {
