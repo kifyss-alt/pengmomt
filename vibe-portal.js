@@ -451,10 +451,10 @@ const vibeProjectsData = [
         title: '펭맘 선생님의 AI 미래교육 스페이스',
         problem: '유아교육, 특수교육, AI·에듀테크, 바이브코딩 활동과 강의 자료가 여러 곳에 흩어져 있어 교사들과 나누기 어려웠습니다.',
         features: '반응형 SPA 레이아웃, 메뉴별 포트폴리오, 바이브코딩 학습 포털, 47종 UI·UX 실전 도감, 동화 출간작 소개',
-        tools: 'Antigravity / HTML / CSS / JavaScript',
+        tools: 'Antigravity, Claude Code, Codex / HTML / CSS / JavaScript',
         target: '유치원 및 특수교육 교사, 학부모, 연수 담당자',
         status: '제작 중',
-        tags: ['Antigravity', 'HTML', 'CSS', 'JavaScript', '포트폴리오'],
+        tags: ['Antigravity', 'Claude Code', 'Codex', 'HTML', 'CSS', 'JavaScript', '포트폴리오'],
         isFeatured: true,
         previewUrl: '#'
     },
@@ -492,7 +492,7 @@ const vibeLecturesData = [
         diff: '초급',
         target: '코딩을 전혀 모르는 비전공자 유치원 및 학교 교사',
         outcome: '간단한 학급 안내 페이지 및 참여형 퀴즈 웹앱 완성',
-        tools: 'Antigravity / ChatGPT / HTML / CSS',
+        tools: 'Antigravity, Claude Code, Codex / ChatGPT / HTML / CSS',
         desc: '바이브코딩의 개념과 제작 흐름을 이해하고 AI와 대화하며 나만의 첫 웹앱을 만들어 보는 입문 강의'
     },
     {
