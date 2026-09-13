@@ -447,6 +447,18 @@ const vibeUiuxData = [
 // 3. 작업실 데이터 (vibeProjectsData)
 const vibeProjectsData = [
     {
+        id: 'proj-0',
+        title: '우리나라 지도 퍼즐',
+        problem: '유아들이 우리나라 8도의 위치와 이름을 놀이로 자연스럽게 익힐 수 있는 교구가 필요했습니다.',
+        features: '드래그 앤 드롭으로 조각 맞추기, 조각을 누르면 도 이름 음성으로 읽어주기, 이름 숨기기 도전 모드, 정답 보기, 완성 축하 애니메이션',
+        tools: 'Antigravity, Claude Code, Codex / HTML / CSS / JavaScript (SVG, Web Audio API)',
+        target: '유치원 및 초등 저학년 유아, 특수교육 대상 학생',
+        status: '공개',
+        tags: ['수업·놀이', '웹앱', '유아교육', '특수교육'],
+        isFeatured: true,
+        previewUrl: 'games/korea-map-puzzle/index.html'
+    },
+    {
         id: 'proj-1',
         title: '펭맘 선생님의 AI 미래교육 스페이스',
         problem: '유아교육, 특수교육, AI·에듀테크, 바이브코딩 활동과 강의 자료가 여러 곳에 흩어져 있어 교사들과 나누기 어려웠습니다.',
