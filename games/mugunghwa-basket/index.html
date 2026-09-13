@@ -1,0 +1,1069 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>무궁화 바구니</title>
+<meta name="description" content="카메라 앞에서 손이나 몸을 좌우로 움직여 바구니를 옮기고, 떨어지는 무궁화 꽃잎을 받아 바구니를 채우는 모션인식 미니게임. 카메라가 없으면 마우스·터치·키보드로도 플레이할 수 있다.">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=Gowun+Dodum&display=swap">
+<style>
+  :root{
+    --sky-deep:#171b3d;
+    --sky-mid:#4a3768;
+    --sky-horizon:#c9637a;
+    --petal-white:#fdf3f0;
+    --petal-pink:#f2a6c2;
+    --petal-throat:#c23a56;
+    --basket-brown:#6b4a35;
+    --basket-brown-dark:#4a3324;
+    --ink:#fdf6f2;
+    --ink-soft:#d9c7d6;
+    --ink-faint:rgba(253,246,242,0.55);
+    --glass-bg:rgba(23,27,61,0.62);
+    --glass-border:rgba(253,246,242,0.16);
+    --mountain-far:#241f47;
+    --mountain-near:#191333;
+  }
+
+  *{box-sizing:border-box;}
+  html,body{height:100%;}
+  body{
+    margin:0;
+    background:var(--sky-deep);
+    color:var(--ink);
+    font-family:'Gowun Dodum','Malgun Gothic',sans-serif;
+    overflow:hidden;
+    -webkit-tap-highlight-color:transparent;
+  }
+
+  h1,h2,.display{
+    font-family:'Gowun Batang',serif;
+    text-wrap:balance;
+  }
+
+  .back-link{
+    position:fixed; top:10px; left:10px; z-index:20;
+    font-family:'Gowun Dodum',sans-serif; font-size:.78rem;
+    color:rgba(253,246,242,.55); text-decoration:none;
+    background:rgba(23,27,61,.5); padding:.25rem .6rem; border-radius:999px;
+    transition:color .15s ease, background .15s ease;
+  }
+  .back-link:hover{ color:#fdf6f2; background:rgba(23,27,61,.8); }
+
+  #stage{
+    position:relative;
+    width:100vw;
+    height:100vh;
+    min-height:480px;
+  }
+
+  #game{
+    position:absolute;
+    inset:0;
+    display:block;
+    width:100%;
+    height:100%;
+    touch-action:none;
+    cursor:crosshair;
+  }
+
+  /* ---------- HUD ---------- */
+  #hud{
+    position:absolute;
+    top:0;
+    left:0;
+    right:0;
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+    gap:12px;
+    padding:16px clamp(12px,3vw,28px);
+    pointer-events:none;
+    z-index:5;
+  }
+
+  .pill{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    background:var(--glass-bg);
+    border:1px solid var(--glass-border);
+    backdrop-filter:blur(10px);
+    -webkit-backdrop-filter:blur(10px);
+    border-radius:999px;
+    padding:8px 16px;
+    box-shadow:0 4px 18px rgba(0,0,0,0.25);
+  }
+
+  .stat{
+    display:flex;
+    flex-direction:column;
+    line-height:1.05;
+  }
+  .stat .num{
+    font-variant-numeric:tabular-nums;
+    font-size:1.05rem;
+    font-weight:700;
+    letter-spacing:0.01em;
+  }
+  .stat .lbl{
+    font-size:0.62rem;
+    letter-spacing:0.08em;
+    color:var(--ink-soft);
+  }
+
+  #lives{
+    display:flex;
+    gap:4px;
+    font-size:1rem;
+    filter:drop-shadow(0 1px 2px rgba(0,0,0,0.4));
+  }
+  #lives span.lost{opacity:0.22;}
+
+  #basketMeter{
+    display:flex;
+    align-items:center;
+    gap:8px;
+  }
+  #basketMeter .track{
+    width:min(28vw,150px);
+    height:7px;
+    border-radius:999px;
+    background:rgba(253,246,242,0.15);
+    overflow:hidden;
+  }
+  #basketMeter .fill{
+    height:100%;
+    width:0%;
+    background:linear-gradient(90deg,var(--petal-pink),var(--petal-throat));
+    border-radius:999px;
+    transition:width 0.25s ease;
+  }
+  #basketMeter .num{font-size:0.78rem;}
+
+  /* ---------- Camera widget ---------- */
+  #camWidget{
+    position:absolute;
+    left:16px;
+    bottom:16px;
+    z-index:5;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:6px;
+  }
+  #camFrame{
+    width:96px;
+    height:96px;
+    border-radius:50%;
+    overflow:hidden;
+    border:2px solid var(--glass-border);
+    box-shadow:0 6px 20px rgba(0,0,0,0.35);
+    background:#0e1030;
+    position:relative;
+  }
+  #camPreview{
+    width:100%;
+    height:100%;
+    display:block;
+  }
+  #camStatus{
+    font-size:0.62rem;
+    letter-spacing:0.04em;
+    color:var(--ink-soft);
+    background:var(--glass-bg);
+    border:1px solid var(--glass-border);
+    padding:3px 10px;
+    border-radius:999px;
+    white-space:nowrap;
+  }
+  #modeToggle{
+    font-family:inherit;
+    font-size:0.66rem;
+    color:var(--ink);
+    background:rgba(253,246,242,0.1);
+    border:1px solid var(--glass-border);
+    padding:4px 10px;
+    border-radius:999px;
+    cursor:pointer;
+  }
+  #modeToggle:hover{background:rgba(253,246,242,0.18);}
+  #modeToggle:focus-visible,button:focus-visible,#stage:focus-visible{
+    outline:2px solid var(--petal-pink);
+    outline-offset:2px;
+  }
+
+  /* ---------- Overlay panels ---------- */
+  #overlay{
+    position:absolute;
+    inset:0;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    z-index:10;
+    padding:24px;
+  }
+  #overlay[hidden]{display:none;}
+  .panel{
+    max-width:440px;
+    width:100%;
+    background:var(--glass-bg);
+    border:1px solid var(--glass-border);
+    backdrop-filter:blur(16px);
+    -webkit-backdrop-filter:blur(16px);
+    border-radius:22px;
+    padding:clamp(24px,5vw,40px);
+    text-align:center;
+    box-shadow:0 20px 60px rgba(0,0,0,0.45);
+  }
+  #basketDoneImg{
+    display:block;
+    width:220px;
+    height:192px;
+    margin:-6px auto 6px;
+    filter:drop-shadow(0 10px 22px rgba(0,0,0,0.45));
+  }
+  .panel h1{
+    font-size:clamp(1.8rem,6vw,2.5rem);
+    margin:0 0 6px;
+    color:var(--ink);
+  }
+  .panel .tagline{
+    font-size:0.92rem;
+    color:var(--ink-soft);
+    margin:0 0 20px;
+    line-height:1.6;
+  }
+  .panel .howto{
+    font-size:0.82rem;
+    color:var(--ink-faint);
+    margin:0 0 24px;
+    line-height:1.65;
+  }
+  .panel .howto b{color:var(--petal-pink);font-weight:700;}
+
+  .btn{
+    font-family:'Gowun Dodum',sans-serif;
+    font-size:0.98rem;
+    font-weight:700;
+    color:var(--sky-deep);
+    background:linear-gradient(135deg,var(--petal-white),var(--petal-pink));
+    border:none;
+    border-radius:999px;
+    padding:13px 30px;
+    cursor:pointer;
+    box-shadow:0 8px 22px rgba(194,58,86,0.35);
+    transition:transform 0.15s ease;
+  }
+  .btn:hover{transform:translateY(-1px);}
+  .btn:active{transform:translateY(0);}
+  .btn.secondary{
+    background:none;
+    color:var(--ink-soft);
+    box-shadow:none;
+    border:1px solid var(--glass-border);
+    font-weight:400;
+    font-size:0.82rem;
+    padding:10px 20px;
+  }
+  .btnRow{display:flex;flex-direction:column;align-items:center;gap:10px;}
+
+  .resultGrid{
+    display:flex;
+    justify-content:center;
+    gap:28px;
+    margin:0 0 26px;
+  }
+  .resultGrid .item .num{
+    font-size:1.6rem;
+    font-weight:700;
+    font-variant-numeric:tabular-nums;
+    color:var(--petal-pink);
+  }
+  .resultGrid .item .lbl{
+    font-size:0.68rem;
+    letter-spacing:0.06em;
+    color:var(--ink-soft);
+    margin-top:2px;
+  }
+
+  #toast{
+    position:absolute;
+    top:78px;
+    left:50%;
+    transform:translateX(-50%) translateY(-8px);
+    background:var(--glass-bg);
+    border:1px solid var(--glass-border);
+    color:var(--ink-soft);
+    font-size:0.78rem;
+    padding:8px 18px;
+    border-radius:999px;
+    z-index:8;
+    opacity:0;
+    pointer-events:none;
+    transition:opacity 0.3s ease, transform 0.3s ease;
+  }
+  #toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+  @media (prefers-reduced-motion:reduce){
+    .btn{transition:none;}
+    #toast{transition:none;}
+  }
+</style>
+</head>
+<body>
+<a href="../../index.html" class="back-link">← 펭맘 스페이스로</a>
+<div id="stage" tabindex="0">
+  <canvas id="game" width="1280" height="720"></canvas>
+
+  <div id="hud">
+    <div class="pill">
+      <span aria-hidden="true">🌸</span>
+      <div class="stat"><span class="num" id="scoreNum">0</span><span class="lbl">받은 꽃잎</span></div>
+    </div>
+    <div class="pill" id="basketMeter">
+      <div class="stat"><span class="num" id="basketNum">0 / 15</span><span class="lbl">바구니</span></div>
+      <div class="track"><div class="fill" id="basketFill" style="width:0%"></div></div>
+    </div>
+    <div class="pill">
+      <div id="lives" aria-label="남은 생명"><span>🌺</span><span>🌺</span><span>🌺</span></div>
+    </div>
+  </div>
+
+  <div id="toast"></div>
+
+  <div id="camWidget">
+    <div id="camFrame">
+      <canvas id="camPreview" width="96" height="96"></canvas>
+    </div>
+    <div id="camStatus">대기 중</div>
+    <button id="modeToggle" type="button">🖱 마우스로 전환</button>
+  </div>
+
+  <div id="overlay">
+    <div class="panel" id="panelStart">
+      <h1>무궁화 바구니</h1>
+      <p class="tagline">무궁화는 하루 피었다 지지만, 나무는 다시 꽃을 피워냅니다.<br>오늘도 삼천리 위로 꽃잎이 흩날립니다.</p>
+      <p class="howto">카메라 앞에서 <b>손이나 몸을 좌우로 움직여</b> 바구니를 옮기고, 떨어지는 무궁화 꽃잎을 받아 바구니를 채워보세요. 카메라를 쓸 수 없다면 <b>마우스나 터치</b>로도 플레이할 수 있어요.</p>
+      <div class="btnRow">
+        <button class="btn" id="btnStartCam" type="button">📷 카메라로 시작하기</button>
+        <button class="btn secondary" id="btnStartMouse" type="button">마우스로 바로 시작하기</button>
+      </div>
+    </div>
+
+    <div class="panel" id="panelBasketDone" hidden>
+      <img id="basketDoneImg" alt="완성된 무궁화 바구니" width="220" height="192">
+      <h1>바구니 완성!</h1>
+      <p class="tagline" id="basketDoneText">무궁화 꽃잎 열다섯 장이 소담히 모였습니다.</p>
+      <div class="btnRow">
+        <button class="btn" id="btnNextBasket" type="button">다음 바구니 엮기</button>
+      </div>
+    </div>
+
+    <div class="panel" id="panelOver" hidden>
+      <h1>바구니를 놓쳤어요</h1>
+      <div class="resultGrid">
+        <div class="item"><div class="num" id="finalScore">0</div><div class="lbl">받은 꽃잎</div></div>
+        <div class="item"><div class="num" id="finalBaskets">0</div><div class="lbl">완성한 바구니</div></div>
+        <div class="item"><div class="num" id="finalBest">0</div><div class="lbl">최고 기록</div></div>
+      </div>
+      <div class="btnRow">
+        <button class="btn" id="btnRetry" type="button">다시 도전하기</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  var reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  var stage = document.getElementById('stage');
+  var canvas = document.getElementById('game');
+  var ctx = canvas.getContext('2d');
+  var camPreview = document.getElementById('camPreview');
+  var camCtx = camPreview.getContext('2d', {willReadFrequently:true});
+  var camStatus = document.getElementById('camStatus');
+  var modeToggle = document.getElementById('modeToggle');
+  var toastEl = document.getElementById('toast');
+
+  var scoreNum = document.getElementById('scoreNum');
+  var basketNum = document.getElementById('basketNum');
+  var basketFillEl = document.getElementById('basketFill');
+  var livesEl = document.getElementById('lives');
+
+  var overlay = document.getElementById('overlay');
+  var panelStart = document.getElementById('panelStart');
+  var panelBasketDone = document.getElementById('panelBasketDone');
+  var basketDoneText = document.getElementById('basketDoneText');
+  var basketDoneImg = document.getElementById('basketDoneImg');
+  var panelOver = document.getElementById('panelOver');
+  var finalScore = document.getElementById('finalScore');
+  var finalBaskets = document.getElementById('finalBaskets');
+  var finalBest = document.getElementById('finalBest');
+
+  var BEST_KEY = 'mugunghwa-basket-best';
+  var best = 0;
+  try { best = parseInt(localStorage.getItem(BEST_KEY) || '0', 10) || 0; } catch(e){ best = 0; }
+
+  var W = 0, H = 0, DPR = Math.min(window.devicePixelRatio || 1, 2);
+
+  function resize(){
+    W = stage.clientWidth;
+    H = stage.clientHeight;
+    canvas.width = Math.round(W * DPR);
+    canvas.height = Math.round(H * DPR);
+    canvas.style.width = W + 'px';
+    canvas.style.height = H + 'px';
+    ctx.setTransform(DPR,0,0,DPR,0,0);
+    buildMountains();
+  }
+  window.addEventListener('resize', resize);
+
+  // ---------------- Mountains (decorative silhouette) ----------------
+  var mountainsFar = [], mountainsNear = [];
+  function buildRidge(baseY, amp, seed){
+    var pts = [];
+    var n = 9;
+    for (var i=0;i<=n;i++){
+      var x = (W) * (i/n);
+      var y = baseY - Math.abs(Math.sin(i*1.7+seed)*amp) - Math.abs(Math.cos(i*0.6+seed*2)*amp*0.5);
+      pts.push([x,y]);
+    }
+    return pts;
+  }
+  function buildMountains(){
+    mountainsFar = buildRidge(H*0.72, H*0.07, 1.3);
+    mountainsNear = buildRidge(H*0.82, H*0.09, 4.1);
+  }
+  function drawRidge(pts, color){
+    ctx.beginPath();
+    ctx.moveTo(0, H);
+    for (var i=0;i<pts.length;i++) ctx.lineTo(pts[i][0], pts[i][1]);
+    ctx.lineTo(W, H);
+    ctx.closePath();
+    ctx.fillStyle = color;
+    ctx.fill();
+  }
+
+  // ---------------- Sky ----------------
+  function drawSky(){
+    var g = ctx.createLinearGradient(0,0,0,H);
+    g.addColorStop(0, '#171b3d');
+    g.addColorStop(0.55, '#4a3768');
+    g.addColorStop(1, '#c9637a');
+    ctx.fillStyle = g;
+    ctx.fillRect(0,0,W,H);
+
+    // soft moon glow
+    var mx = W*0.82, my = H*0.18, mr = Math.min(W,H)*0.09;
+    var glow = ctx.createRadialGradient(mx,my,0,mx,my,mr*3.2);
+    glow.addColorStop(0,'rgba(253,246,242,0.55)');
+    glow.addColorStop(1,'rgba(253,246,242,0)');
+    ctx.fillStyle = glow;
+    ctx.fillRect(0,0,W,H);
+    ctx.beginPath();
+    ctx.fillStyle = 'rgba(253,246,242,0.9)';
+    ctx.arc(mx,my,mr,0,Math.PI*2);
+    ctx.fill();
+
+    drawRidge(mountainsFar, '#241f47');
+    drawRidge(mountainsNear, '#191333');
+  }
+
+  // ---------------- Blossom drawing ----------------
+  function drawBlossom(cx, cy, size, rot, alpha){
+    ctx.save();
+    ctx.globalAlpha = alpha === undefined ? 1 : alpha;
+    ctx.translate(cx, cy);
+    ctx.rotate(rot);
+    var petalCount = 5;
+    for (var i=0;i<petalCount;i++){
+      ctx.save();
+      ctx.rotate((Math.PI*2/petalCount)*i);
+      var grad = ctx.createLinearGradient(0,0,0,-size);
+      grad.addColorStop(0, '#fdf3f0');
+      grad.addColorStop(1, '#f2a6c2');
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.moveTo(0,0);
+      ctx.quadraticCurveTo(size*0.55, -size*0.42, 0, -size);
+      ctx.quadraticCurveTo(-size*0.55, -size*0.42, 0, 0);
+      ctx.fill();
+      ctx.restore();
+    }
+    ctx.beginPath();
+    ctx.fillStyle = '#c23a56';
+    ctx.arc(0,0,size*0.16,0,Math.PI*2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  // ---------------- Basket drawing ----------------
+  var BASKET_W = 0, BASKET_H = 0;
+
+  var BASKET_BEHIND_SLOTS = [
+    {dx:-0.20, dy:-0.09, r:0.6}, {dx:0.20, dy:-0.09, r:2.1},
+    {dx:0,     dy:-0.15, r:3.4}, {dx:-0.10,dy:-0.05, r:4.7},
+    {dx:0.10,  dy:-0.05, r:1.2}
+  ];
+  var BASKET_FRONT_SLOTS = [
+    {dx:-0.30, dy:-0.26, r:0.3}, {dx:0.30,  dy:-0.26, r:2.8},
+    {dx:-0.14, dy:-0.36, r:1.6}, {dx:0.14,  dy:-0.36, r:5.0},
+    {dx:0,     dy:-0.42, r:3.9}, {dx:-0.24, dy:-0.36, r:0.9},
+    {dx:0.24,  dy:-0.36, r:4.4}, {dx:-0.38, dy:-0.14, r:2.2},
+    {dx:0.38,  dy:-0.14, r:5.5}
+  ];
+  var BASKET_TOTAL_SLOTS = BASKET_BEHIND_SLOTS.length + BASKET_FRONT_SLOTS.length;
+
+  function drawBasket(x, y, fillCount, goal){
+    var w = BASKET_W, h = BASKET_H;
+    var ratio = Math.max(0, Math.min(1, fillCount/goal));
+    var visible = Math.round(ratio * BASKET_TOTAL_SLOTS);
+    var behindCount = Math.min(visible, BASKET_BEHIND_SLOTS.length);
+    var frontCount = Math.max(0, visible - BASKET_BEHIND_SLOTS.length);
+
+    ctx.save();
+    ctx.translate(x, y);
+
+    for (var i=0;i<behindCount;i++){
+      var s = BASKET_BEHIND_SLOTS[i];
+      drawBlossom(s.dx*w, s.dy*h, w*0.17, s.r, 1);
+    }
+
+    ctx.beginPath();
+    ctx.moveTo(-w*0.42, -h*0.05);
+    ctx.lineTo(w*0.42, -h*0.05);
+    ctx.lineTo(w*0.33, h*0.5);
+    ctx.quadraticCurveTo(0, h*0.6, -w*0.33, h*0.5);
+    ctx.closePath();
+    var bg = ctx.createLinearGradient(0,-h*0.05,0,h*0.5);
+    bg.addColorStop(0, '#6b4a35');
+    bg.addColorStop(1, '#4a3324');
+    ctx.fillStyle = bg;
+    ctx.fill();
+
+    ctx.strokeStyle = 'rgba(253,246,242,0.18)';
+    ctx.lineWidth = Math.max(1, w*0.012);
+    for (var wl=1; wl<=3; wl++){
+      var t = wl/4;
+      ctx.beginPath();
+      ctx.moveTo(-w*0.42*(1-t)-w*0.33*t, -h*0.05 + (h*0.55)*t);
+      ctx.lineTo(w*0.42*(1-t)+w*0.33*t, -h*0.05 + (h*0.55)*t);
+      ctx.stroke();
+    }
+
+    ctx.beginPath();
+    ctx.ellipse(0, -h*0.05, w*0.44, h*0.09, 0, 0, Math.PI*2);
+    ctx.fillStyle = '#7d5a42';
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(253,246,242,0.22)';
+    ctx.lineWidth = Math.max(1, w*0.015);
+    ctx.stroke();
+
+    for (var j=0;j<frontCount;j++){
+      var f = BASKET_FRONT_SLOTS[j];
+      drawBlossom(f.dx*w, f.dy*h, w*0.19, f.r, 1);
+    }
+
+    ctx.restore();
+  }
+
+  // ---------------- Particles ----------------
+  var particles = [];
+  function burst(x,y){
+    var n = reduceMotion ? 0 : 10;
+    for (var i=0;i<n;i++){
+      var ang = Math.random()*Math.PI*2;
+      var spd = 60 + Math.random()*90;
+      particles.push({
+        x:x, y:y,
+        vx:Math.cos(ang)*spd, vy:Math.sin(ang)*spd - 40,
+        life:1, size:2+Math.random()*3
+      });
+    }
+  }
+  function updateParticles(dt){
+    for (var i=particles.length-1;i>=0;i--){
+      var p = particles[i];
+      p.x += p.vx*dt; p.y += p.vy*dt; p.vy += 220*dt;
+      p.life -= dt*1.4;
+      if (p.life<=0) particles.splice(i,1);
+    }
+  }
+  function drawParticles(){
+    for (var i=0;i<particles.length;i++){
+      var p = particles[i];
+      ctx.globalAlpha = Math.max(p.life,0);
+      ctx.fillStyle = '#f2a6c2';
+      ctx.beginPath();
+      ctx.arc(p.x,p.y,p.size,0,Math.PI*2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  // ---------------- Ambient background petals ----------------
+  var ambient = [];
+  function seedAmbient(){
+    ambient = [];
+    var n = reduceMotion ? 0 : 7;
+    for (var i=0;i<n;i++){
+      ambient.push({
+        x:Math.random()*W, y:Math.random()*H,
+        size:10+Math.random()*14,
+        speed:8+Math.random()*10,
+        sway:Math.random()*Math.PI*2,
+        rot:Math.random()*Math.PI*2
+      });
+    }
+  }
+  function updateAmbient(dt){
+    for (var i=0;i<ambient.length;i++){
+      var a = ambient[i];
+      a.y += a.speed*dt;
+      a.sway += dt*0.6;
+      a.rot += dt*0.15;
+      if (a.y > H+30){ a.y = -30; a.x = Math.random()*W; }
+    }
+  }
+  function drawAmbient(){
+    for (var i=0;i<ambient.length;i++){
+      var a = ambient[i];
+      drawBlossom(a.x + Math.sin(a.sway)*18, a.y, a.size, a.rot, 0.16);
+    }
+  }
+
+  // ---------------- Game state ----------------
+  var STATE = { MENU:'menu', PLAYING:'playing', BASKET_DONE:'basketDone', OVER:'over' };
+  var state = STATE.MENU;
+
+  var score = 0, lives = 3, basketsCompleted = 0;
+  var basketFill = 0, basketGoal = 15;
+  var difficulty = 0;
+
+  var basket = { x:0, y:0, tx:0, ty:0 };
+  var yMin, yMax, xMin, xMax;
+
+  var gamePetals = [];
+  var spawnTimer = 0;
+  var spawnInterval = 1150;
+  var fallSpeed = 95;
+
+  function layoutBasketBounds(){
+    BASKET_W = Math.max(135, Math.min(W*0.26, 280));
+    BASKET_H = BASKET_W*0.72;
+    xMin = BASKET_W*0.5 + 6;
+    xMax = W - BASKET_W*0.5 - 6;
+    yMin = H*0.60;
+    yMax = H*0.88;
+    if (basket.x===0 && basket.y===0){
+      basket.x = basket.tx = W/2;
+      basket.y = basket.ty = yMax;
+    }
+  }
+
+  function resetRun(){
+    score = 0; lives = 3; basketsCompleted = 0;
+    basketFill = 0; basketGoal = 15; difficulty = 0;
+    gamePetals = []; particles = [];
+    spawnInterval = 1150; fallSpeed = 95;
+    updateHUD();
+  }
+
+  function updateHUD(){
+    scoreNum.textContent = score;
+    basketNum.textContent = basketFill + ' / ' + basketGoal;
+    basketFillEl.style.width = Math.min(100, (basketFill/basketGoal)*100) + '%';
+    var hearts = '';
+    for (var i=0;i<3;i++){
+      hearts += '<span' + (i<lives?'':' class="lost"') + '>🌺</span>';
+    }
+    livesEl.innerHTML = hearts;
+  }
+
+  function showToast(msg){
+    toastEl.textContent = msg;
+    toastEl.classList.add('show');
+    clearTimeout(showToast._t);
+    showToast._t = setTimeout(function(){ toastEl.classList.remove('show'); }, 2600);
+  }
+
+  function spawnPetal(){
+    var size = 30 + Math.random()*18;
+    var spawnLeft = Math.min(xMin + 30, W*0.5);
+    var spawnRight = Math.max(xMax - 30, W*0.5);
+    gamePetals.push({
+      x: spawnLeft + Math.random()*(spawnRight - spawnLeft),
+      y: -size,
+      size: size,
+      vy: fallSpeed + Math.random()*30,
+      sway: Math.random()*Math.PI*2,
+      swayAmp: 14 + Math.random()*16,
+      rot: Math.random()*Math.PI*2,
+      rotSpeed: (Math.random()-0.5)*1.4,
+      baseX: 0
+    });
+    var last = gamePetals[gamePetals.length-1];
+    last.baseX = last.x;
+  }
+
+  function loseLife(){
+    lives -= 1;
+    updateHUD();
+    if (lives<=0){
+      endRun();
+    }
+  }
+
+  function catchPetal(p){
+    score += 1;
+    basketFill += 1;
+    burst(p.x, p.y);
+    updateHUD();
+    if (basketFill >= basketGoal){
+      completeBasket();
+    }
+  }
+
+  function renderBasketPortrait(goal){
+    var sw = 320, sh = 280;
+    var sc = document.createElement('canvas');
+    sc.width = sw; sc.height = sh;
+    var sctx = sc.getContext('2d');
+
+    var glow = sctx.createRadialGradient(sw*0.5, sh*0.55, 10, sw*0.5, sh*0.55, sw*0.55);
+    glow.addColorStop(0, 'rgba(242,166,194,0.35)');
+    glow.addColorStop(1, 'rgba(242,166,194,0)');
+    sctx.fillStyle = glow;
+    sctx.fillRect(0,0,sw,sh);
+
+    var savedCtx = ctx, savedW = BASKET_W, savedH = BASKET_H;
+    ctx = sctx;
+    BASKET_W = 210; BASKET_H = BASKET_W*0.72;
+    drawBasket(sw*0.5, sh*0.72, goal, goal);
+    ctx = savedCtx;
+    BASKET_W = savedW; BASKET_H = savedH;
+
+    return sc.toDataURL('image/png');
+  }
+
+  function completeBasket(){
+    state = STATE.BASKET_DONE;
+    basketsCompleted += 1;
+    difficulty += 1;
+    var lines = [
+      '무궁화 꽃잎 ' + basketGoal + '장이 소담히 모였습니다.',
+      '바구니 가득, 하루의 꽃이 모두 담겼습니다.',
+      '삼천리 위로 흩날린 꽃잎이 바구니를 채웠습니다.'
+    ];
+    basketDoneText.textContent = lines[Math.min(basketsCompleted-1, lines.length-1)] + ' (' + basketsCompleted + '번째 바구니)';
+    basketDoneImg.src = renderBasketPortrait(basketGoal);
+    burst(basket.x, basket.y - BASKET_H*0.3);
+    burst(basket.x - BASKET_W*0.3, basket.y - BASKET_H*0.15);
+    burst(basket.x + BASKET_W*0.3, basket.y - BASKET_H*0.15);
+    openPanel(panelBasketDone);
+  }
+
+  function nextBasket(){
+    basketFill = 0;
+    basketGoal = 15 + basketsCompleted*3;
+    spawnInterval = Math.max(550, 1150 - difficulty*90);
+    fallSpeed = 95 + difficulty*14;
+    gamePetals = [];
+    updateHUD();
+    closeOverlay();
+    state = STATE.PLAYING;
+  }
+
+  function endRun(){
+    state = STATE.OVER;
+    if (score > best){
+      best = score;
+      try { localStorage.setItem(BEST_KEY, String(best)); } catch(e){}
+    }
+    finalScore.textContent = score;
+    finalBaskets.textContent = basketsCompleted;
+    finalBest.textContent = best;
+    openPanel(panelOver);
+  }
+
+  function openPanel(p){
+    overlay.hidden = false;
+    panelStart.hidden = true;
+    panelBasketDone.hidden = true;
+    panelOver.hidden = true;
+    p.hidden = false;
+  }
+  function closeOverlay(){ overlay.hidden = true; }
+
+  // ---------------- Input: motion tracking ----------------
+  var video = document.createElement('video');
+  video.setAttribute('playsinline','');
+  video.muted = true;
+  var procCanvas = document.createElement('canvas');
+  procCanvas.width = 64; procCanvas.height = 48;
+  var procCtx = procCanvas.getContext('2d', {willReadFrequently:true});
+  var prevFrame = null;
+  var camActive = false;
+  var controlMode = 'motion';
+  var motionTargetNorm = {x:0.5, y:0.7};
+  var lastMotionAt = 0;
+  var MOTION_GAIN_X = 1.9;
+  var MOTION_GAIN_Y = 1.6;
+  function clamp01(v){ return Math.max(0, Math.min(1, v)); }
+
+  function initCamera(){
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
+      fallbackToMouse('이 브라우저에서는 카메라를 사용할 수 없어요.');
+      return Promise.reject();
+    }
+    return navigator.mediaDevices.getUserMedia({ video:{ facingMode:'user', width:{ideal:320}, height:{ideal:240} }, audio:false })
+      .then(function(stream){
+        video.srcObject = stream;
+        return video.play();
+      })
+      .then(function(){
+        camActive = true;
+        controlMode = 'motion';
+        camStatus.textContent = '모션 인식 중';
+        modeToggle.textContent = '🖱 마우스로 전환';
+        requestAnimationFrame(motionLoop);
+      })
+      .catch(function(err){
+        fallbackToMouse('카메라를 사용할 수 없어 마우스로 조작할게요.');
+      });
+  }
+
+  function fallbackToMouse(msg){
+    controlMode = 'mouse';
+    camActive = false;
+    camStatus.textContent = '마우스/터치 조작';
+    modeToggle.textContent = '📷 카메라로 전환';
+    showToast(msg);
+  }
+
+  function motionLoop(){
+    if (controlMode === 'motion' && camActive && video.readyState >= 2){
+      procCtx.save();
+      procCtx.translate(procCanvas.width, 0);
+      procCtx.scale(-1,1);
+      procCtx.drawImage(video, 0, 0, procCanvas.width, procCanvas.height);
+      procCtx.restore();
+
+      camCtx.save();
+      camCtx.translate(camPreview.width,0);
+      camCtx.scale(-1,1);
+      camCtx.drawImage(video, 0,0, camPreview.width, camPreview.height);
+      camCtx.restore();
+
+      var frame = procCtx.getImageData(0,0,procCanvas.width, procCanvas.height);
+      var data = frame.data;
+      if (prevFrame){
+        var pdata = prevFrame.data;
+        var sumX=0, sumY=0, count=0;
+        var w = procCanvas.width, h = procCanvas.height;
+        for (var y=0;y<h;y++){
+          for (var x=0;x<w;x++){
+            var idx = (y*w+x)*4;
+            var diff = Math.abs(data[idx]-pdata[idx]) + Math.abs(data[idx+1]-pdata[idx+1]) + Math.abs(data[idx+2]-pdata[idx+2]);
+            if (diff > 45){
+              sumX += x; sumY += y; count++;
+            }
+          }
+        }
+        if (count > 12){
+          var nx = sumX/count/w;
+          var ny = sumY/count/h;
+          motionTargetNorm.x = motionTargetNorm.x*0.55 + nx*0.45;
+          motionTargetNorm.y = motionTargetNorm.y*0.55 + ny*0.45;
+          lastMotionAt = performance.now();
+        }
+      }
+      prevFrame = frame;
+
+      var dotX = camPreview.width * motionTargetNorm.x;
+      var dotY = camPreview.height * motionTargetNorm.y;
+      camCtx.beginPath();
+      camCtx.fillStyle = 'rgba(242,166,194,0.9)';
+      camCtx.arc(dotX, dotY, 6, 0, Math.PI*2);
+      camCtx.fill();
+      camCtx.strokeStyle = 'rgba(253,246,242,0.9)';
+      camCtx.lineWidth = 2;
+      camCtx.stroke();
+
+      if (controlMode === 'motion'){
+        var gx = clamp01(0.5 + (motionTargetNorm.x - 0.5) * MOTION_GAIN_X);
+        var gy = clamp01(0.5 + (motionTargetNorm.y - 0.5) * MOTION_GAIN_Y);
+        basket.tx = xMin + gx * (xMax - xMin);
+        basket.ty = yMin + gy * (yMax - yMin);
+      }
+    }
+    requestAnimationFrame(motionLoop);
+  }
+
+  // ---------------- Input: mouse / touch / keyboard ----------------
+  function pointerToTarget(clientX, clientY){
+    var rect = canvas.getBoundingClientRect();
+    var x = clientX - rect.left;
+    var y = clientY - rect.top;
+    basket.tx = Math.max(xMin, Math.min(xMax, x));
+    basket.ty = Math.max(yMin, Math.min(yMax, y));
+  }
+  stage.addEventListener('pointermove', function(e){
+    if (controlMode === 'mouse') pointerToTarget(e.clientX, e.clientY);
+  });
+  stage.addEventListener('pointerdown', function(e){
+    if (controlMode === 'mouse') pointerToTarget(e.clientX, e.clientY);
+  });
+
+  var keyState = {};
+  window.addEventListener('keydown', function(e){
+    if (['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','a','d','w','s'].indexOf(e.key)>-1){
+      keyState[e.key] = true;
+      if (controlMode !== 'keyboard' && controlMode !== 'mouse') controlMode = 'keyboard';
+      e.preventDefault();
+    }
+  });
+  window.addEventListener('keyup', function(e){ keyState[e.key] = false; });
+  function applyKeyboard(dt){
+    var speed = 420*dt;
+    if (keyState['ArrowLeft']||keyState['a']) basket.tx -= speed;
+    if (keyState['ArrowRight']||keyState['d']) basket.tx += speed;
+    if (keyState['ArrowUp']||keyState['w']) basket.ty -= speed;
+    if (keyState['ArrowDown']||keyState['s']) basket.ty += speed;
+    basket.tx = Math.max(xMin, Math.min(xMax, basket.tx));
+    basket.ty = Math.max(yMin, Math.min(yMax, basket.ty));
+  }
+
+  modeToggle.addEventListener('click', function(){
+    if (controlMode === 'motion'){
+      controlMode = 'mouse';
+      camStatus.textContent = '마우스/터치 조작';
+      modeToggle.textContent = '📷 카메라로 전환';
+    } else {
+      if (camActive){
+        controlMode = 'motion';
+        camStatus.textContent = '모션 인식 중';
+        modeToggle.textContent = '🖱 마우스로 전환';
+      } else {
+        initCamera();
+      }
+    }
+  });
+
+  // ---------------- Main loop ----------------
+  var lastT = 0;
+  function loop(t){
+    requestAnimationFrame(loop);
+    if (document.hidden) { lastT = t; return; }
+    var dt = Math.min((t-lastT)/1000, 0.05) || 0;
+    lastT = t;
+
+    updateAmbient(dt);
+    updateParticles(dt);
+
+    if (state === STATE.PLAYING){
+      applyKeyboard(dt);
+      basket.x += (basket.tx - basket.x)*Math.min(1, dt*8);
+      basket.y += (basket.ty - basket.y)*Math.min(1, dt*8);
+
+      spawnTimer += dt*1000;
+      if (spawnTimer >= spawnInterval){
+        spawnTimer = 0;
+        spawnPetal();
+      }
+
+      var catchBandTop = basket.y - BASKET_H*0.65;
+      var catchBandBottom = basket.y + BASKET_H*0.2;
+      var catchLeft = basket.x - BASKET_W*0.52;
+      var catchRight = basket.x + BASKET_W*0.52;
+
+      for (var i=gamePetals.length-1;i>=0;i--){
+        var p = gamePetals[i];
+        p.y += p.vy*dt;
+        p.sway += dt*1.1;
+        p.rot += p.rotSpeed*dt;
+        var driftX = p.baseX + Math.sin(p.sway)*p.swayAmp;
+        p.x = driftX;
+
+        if (p.y >= catchBandTop && p.y <= catchBandBottom && p.x >= catchLeft && p.x <= catchRight){
+          gamePetals.splice(i,1);
+          catchPetal(p);
+          continue;
+        }
+        if (p.y - p.size > H){
+          gamePetals.splice(i,1);
+          loseLife();
+        }
+      }
+    } else {
+      basket.x += (basket.tx - basket.x)*Math.min(1, dt*8);
+      basket.y += (basket.ty - basket.y)*Math.min(1, dt*8);
+    }
+
+    render();
+  }
+
+  function render(){
+    drawSky();
+    drawAmbient();
+
+    for (var i=0;i<gamePetals.length;i++){
+      var p = gamePetals[i];
+      drawBlossom(p.x, p.y, p.size, p.rot, 1);
+    }
+
+    drawBasket(basket.x, basket.y, basketFill, basketGoal);
+    drawParticles();
+  }
+
+  // ---------------- Boot ----------------
+  function boot(){
+    resize();
+    layoutBasketBounds();
+    seedAmbient();
+    updateHUD();
+    requestAnimationFrame(loop);
+  }
+
+  document.getElementById('btnStartCam').addEventListener('click', function(){
+    resetRun();
+    layoutBasketBounds();
+    initCamera().then(function(){
+      state = STATE.PLAYING;
+      closeOverlay();
+    }).catch(function(){
+      state = STATE.PLAYING;
+      closeOverlay();
+    });
+  });
+
+  document.getElementById('btnStartMouse').addEventListener('click', function(){
+    resetRun();
+    layoutBasketBounds();
+    fallbackToMouse('마우스나 터치로 바구니를 옮겨보세요.');
+    state = STATE.PLAYING;
+    closeOverlay();
+  });
+
+  document.getElementById('btnNextBasket').addEventListener('click', nextBasket);
+
+  document.getElementById('btnRetry').addEventListener('click', function(){
+    resetRun();
+    layoutBasketBounds();
+    closeOverlay();
+    state = STATE.PLAYING;
+  });
+
+  window.addEventListener('resize', function(){
+    layoutBasketBounds();
+  });
+
+  boot();
+})();
+</script>
+</body>
+</html>

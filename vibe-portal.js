@@ -493,6 +493,18 @@ const vibeProjectsData = [
         tags: ['수업·놀이', '웹앱', '모션인식'],
         isFeatured: false,
         previewUrl: 'games/mugunghwa-taggame/index.html'
+    },
+    {
+        id: 'proj-5',
+        title: '무궁화 바구니 (모션인식 놀이)',
+        problem: '전자칠판·웹캠 앞에서 몸을 움직여 노는 간단한 미니게임으로 무궁화(국화) 소재를 활용한 놀이 콘텐츠가 필요했습니다.',
+        features: '웹캠 프레임 차이로 손·몸 움직임을 추적해 바구니 좌우 이동, 떨어지는 무궁화 꽃잎 받기, 바구니 완성 애니메이션, 카메라가 없을 때 마우스·터치·키보드 조작으로 자동 전환',
+        tools: 'Claude Code / HTML / CSS / JavaScript (Canvas API)',
+        target: '유치원 및 초등 교실, 전자칠판 활용 수업',
+        status: '공개',
+        tags: ['수업·놀이', '웹앱', '모션인식'],
+        isFeatured: false,
+        previewUrl: 'games/mugunghwa-basket/index.html'
     }
 ];
 
