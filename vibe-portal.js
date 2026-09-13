@@ -492,6 +492,7 @@ const vibeProjectsData = [
         status: '공개',
         tags: ['수업·놀이', '웹앱', '모션인식'],
         isFeatured: false,
+        icon: '🧊',
         previewUrl: 'games/mugunghwa-taggame/index.html'
     },
     {
@@ -504,6 +505,7 @@ const vibeProjectsData = [
         status: '공개',
         tags: ['수업·놀이', '웹앱', '모션인식'],
         isFeatured: false,
+        icon: '🧺',
         previewUrl: 'games/mugunghwa-basket/index.html'
     }
 ];
@@ -971,7 +973,7 @@ window.VibePortal = {
         let html = filtered.map(p => `
             <div class="project-item-card">
                 <div class="project-img-placeholder">
-                    <span class="p-icon">${p.isFeatured ? '🌟' : '🛠️'}</span>
+                    <span class="p-icon">${p.icon || (p.isFeatured ? '🌟' : '🛠️')}</span>
                     <span class="p-status">${p.status}</span>
                 </div>
                 <div class="project-body">
