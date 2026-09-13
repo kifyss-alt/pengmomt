@@ -481,6 +481,18 @@ const vibeProjectsData = [
         tags: ['교사업무', '구글자동화', '.gs'],
         isFeatured: false,
         previewUrl: null
+    },
+    {
+        id: 'proj-4',
+        title: '무궁화 술래잡기 (모션인식 놀이)',
+        problem: '전자칠판 앞에서 아이들이 몸을 움직이며 즐길 수 있는 전통 놀이 콘텐츠가 필요했습니다.',
+        features: '웹캠 프레임 차이로 움직임 감지, 인원수만큼 자리 구역을 나눠 개인별 탈락 판정, 브라우저 음성합성(TTS)으로 실제 구호 낭독, 자체 제작 배경 멜로디, 10라운드 생존 성공 판정',
+        tools: 'Claude Code / HTML / CSS / JavaScript / Web Speech API / Web Audio API',
+        target: '유치원 및 초등 교실, 전자칠판 활용 수업',
+        status: '공개',
+        tags: ['수업·놀이', '웹앱', '모션인식'],
+        isFeatured: false,
+        previewUrl: 'games/mugunghwa-taggame/index.html'
     }
 ];
 
