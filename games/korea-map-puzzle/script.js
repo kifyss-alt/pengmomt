@@ -5,85 +5,71 @@
 
 // ------------------------------------------------------------------
 // 1. 데이터: 전통 8도 기준 14개 조각 (남한 + 북한 포함)
-//    points 좌표는 보드(정답판) 위치 기준으로 이미 오프셋(+700, +40)이 반영되어 있습니다.
-//    tray 값은 시작 시 조각이 놓이는 위치까지의 이동값(translate)입니다.
+//    points 좌표는 "원본(raw) 좌표"이며, 실제 렌더링 시 BOARD_OFFSET 만큼 이동해
+//    정답판 위치를 만듭니다. 조각끼리 맞닿는 변은 좌표를 동일하게 맞춰
+//    이어 붙였을 때 우리나라 모양 윤곽선이 그대로 나오도록 설계했습니다.
 // ------------------------------------------------------------------
+
+// 공용 경계 꼭짓점 (해안선 + 내륙 경계가 만나는 지점)
+const V = {
+    // --- 외곽 해안선(북→동→남→서 시계방향) ---
+    b1: [60, 10], b2: [140, 0], b2b: [185, 8], b3: [230, 15], b4: [300, 45],
+    b5: [355, 95], b6: [330, 155], b7: [348, 225], b8: [338, 295], b9: [358, 365],
+    b10: [350, 445], b11: [338, 515], b12: [356, 555], b13: [334, 615], b14: [308, 665],
+    b15: [268, 690], b16: [222, 684], b17: [192, 706], b18: [160, 684], b19: [112, 700],
+    b20: [72, 678], b21: [42, 652], b22: [16, 628], b23: [32, 588], b24: [10, 538],
+    b25: [36, 498], b26: [16, 448], b27: [4, 398], b28: [30, 358], b29: [26, 318],
+    b30: [46, 288], b31: [34, 248], b32: [56, 208], b33: [20, 188], b34: [44, 153],
+    b35: [34, 108], b36: [56, 68], b37: [30, 38],
+    // --- 내륙 경계 교차점 ---
+    q1: [200, 120], q2: [145, 175], q4: [250, 270], q5: [140, 285], q6: [150, 330],
+    q7: [215, 335], q8: [225, 375], q9: [120, 400], q10: [280, 440], q11: [175, 470],
+    q12: [240, 500], q13: [115, 510], q14: [285, 570], q15: [185, 600]
+};
+
+function pts(...keys) {
+    return keys.map(k => V[k]);
+}
+
 const PROVINCES = [
-    {
-        id: 'pyeonganbuk', name: '평안북도', color: '#38bdf8',
-        points: [[760, 55], [850, 50], [910, 85], [925, 150], [890, 205], [810, 210], [755, 170], [720, 110]],
-        label: [822, 130], tray: [-715, -20]
-    },
-    {
-        id: 'hamgyeongbuk', name: '함경북도', color: '#2f9e44',
-        points: [[930, 85], [1000, 55], [1070, 50], [1130, 80], [1180, 130], [1185, 190], [1130, 230], [1060, 215], [1000, 190], [940, 150]],
-        label: [1050, 135], tray: [-770, -25]
-    },
-    {
-        id: 'pyeongannam', name: '평안남도', color: '#fbbf24',
-        points: [[725, 200], [810, 190], [890, 215], [915, 270], [890, 320], [820, 340], [750, 315], [710, 260]],
-        label: [812, 265], tray: [-362, -155]
-    },
-    {
-        id: 'hamgyeongnam', name: '함경남도', color: '#a5b4fc',
-        points: [[980, 195], [1050, 180], [1130, 190], [1175, 240], [1170, 300], [1120, 350], [1050, 360], [990, 330], [965, 270]],
-        label: [1070, 270], tray: [-480, -160]
-    },
-    {
-        id: 'hwanghae', name: '황해도', color: '#ec4899',
-        points: [[715, 330], [790, 320], [860, 340], [890, 380], [875, 430], [810, 450], [740, 435], [700, 390]],
-        label: [797, 385], tray: [-687, -105]
-    },
-    {
-        id: 'gangwon', name: '강원도', color: '#22c55e',
-        points: [[915, 225], [1000, 215], [1080, 230], [1130, 270], [1165, 330], [1160, 390], [1140, 450], [1100, 500], [1040, 510], [980, 480], [950, 430], [930, 370], [900, 300]],
-        label: [1032, 340], tray: [-752, -82]
-    },
-    {
-        id: 'gyeonggi', name: '경기도', color: '#fde047',
-        points: [[775, 435], [850, 430], [910, 450], [925, 490], [900, 530], [840, 540], [780, 520], [755, 480]],
-        label: [842, 485], tray: [-392, -205]
-    },
-    {
-        id: 'chungbuk', name: '충청북도', color: '#fb923c',
-        points: [[925, 475], [990, 470], [1030, 500], [1025, 550], [990, 595], [940, 600], [915, 550], [915, 505]],
-        label: [972, 535], tray: [-382, -255]
-    },
-    {
-        id: 'chungnam', name: '충청남도', color: '#15803d',
-        points: [[710, 525], [780, 520], [850, 530], [900, 550], [915, 590], [890, 625], [820, 630], [750, 610], [705, 570]],
-        label: [810, 575], tray: [-700, -125]
-    },
-    {
-        id: 'gyeongbuk', name: '경상북도', color: '#3b82f6',
-        points: [[1005, 485], [1080, 480], [1150, 500], [1190, 550], [1185, 610], [1140, 655], [1070, 660], [1015, 635], [1000, 580], [1000, 525]],
-        label: [1095, 570], tray: [-815, -120]
-    },
-    {
-        id: 'jeonbuk', name: '전라북도', color: '#f472b6',
-        points: [[730, 615], [800, 610], [870, 625], [920, 650], [925, 690], [880, 700], [810, 695], [755, 670], [725, 640]],
-        label: [825, 655], tray: [-375, -205]
-    },
-    {
-        id: 'gyeongnam', name: '경상남도', color: '#7c3aed',
-        points: [[995, 645], [1070, 640], [1140, 655], [1185, 690], [1180, 725], [1120, 730], [1050, 715], [1000, 690]],
-        label: [1090, 685], tray: [-500, -235]
-    },
-    {
-        id: 'jeonnam', name: '전라남도', color: '#f9a8d4',
-        points: [[710, 690], [790, 685], [860, 690], [920, 695], [965, 710], [960, 745], [910, 775], [840, 780], [770, 760], [710, 735]],
-        label: [837, 730], tray: [-727, -110]
-    },
-    {
-        id: 'jeju', name: '제주도', color: '#f97316',
-        points: [[870, 820], [920, 810], [970, 825], [985, 850], [950, 868], [895, 870], [855, 855]],
-        label: [920, 838], tray: [-640, -215]
-    }
+    { id: 'pyeonganbuk', name: '평안북도', color: '#38bdf8',
+        points: pts('b36', 'b37', 'b1', 'b2', 'b2b', 'q1', 'q2') },
+    { id: 'hamgyeongbuk', name: '함경북도', color: '#2f9e44',
+        points: pts('b2b', 'b3', 'b4', 'b5', 'b6', 'q1') },
+    { id: 'hamgyeongnam', name: '함경남도', color: '#a5b4fc',
+        points: pts('b6', 'b7', 'b8', 'q4', 'q2', 'q1') },
+    { id: 'pyeongannam', name: '평안남도', color: '#fbbf24',
+        points: pts('b34', 'b35', 'b36', 'q2', 'q4', 'q5') },
+    { id: 'hwanghae', name: '황해도', color: '#ec4899',
+        points: pts('b30', 'b31', 'b32', 'b33', 'b34', 'q5', 'q6') },
+    { id: 'gyeonggi', name: '경기도', color: '#fde047',
+        points: pts('b29', 'q6', 'q5', 'q4', 'q7', 'q8', 'q9') },
+    { id: 'gangwon', name: '강원도', color: '#22c55e',
+        points: pts('b8', 'b9', 'b10', 'b11', 'q10', 'q8', 'q7', 'q4') },
+    { id: 'chungbuk', name: '충청북도', color: '#fb923c',
+        points: pts('q8', 'q10', 'q12', 'q11', 'q9') },
+    { id: 'chungnam', name: '충청남도', color: '#15803d',
+        points: pts('b28', 'q9', 'q11', 'q13', 'b26', 'b27') },
+    { id: 'jeonbuk', name: '전라북도', color: '#f472b6',
+        points: pts('b25', 'q13', 'q11', 'q12', 'q14', 'q15', 'b24') },
+    { id: 'gyeongbuk', name: '경상북도', color: '#3b82f6',
+        points: pts('b11', 'b12', 'b13', 'q14', 'q12', 'q10') },
+    { id: 'gyeongnam', name: '경상남도', color: '#7c3aed',
+        points: pts('b13', 'b14', 'b15', 'b16', 'b17', 'q15', 'q14') },
+    { id: 'jeonnam', name: '전라남도', color: '#f9a8d4',
+        points: pts('b17', 'b18', 'b19', 'b20', 'b21', 'b22', 'b23', 'b24', 'q15') },
+    { id: 'jeju', name: '제주도', color: '#f97316',
+        points: [[140, 800], [180, 778], [225, 788], [245, 815], [220, 845], [165, 850], [125, 830]] }
 ];
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
-const SNAP_TOLERANCE = 42;
+const SNAP_TOLERANCE = 40;
 const TAP_THRESHOLD = 6;
+const BOARD_OFFSET = { x: 780, y: 40 };
+
+// 조각 상자(트레이) 영역 - 각 조각의 실제 크기에 맞춰 겹치지 않게 자동 배치
+const TRAY_BOUNDS = { x: 10, y: 40, width: 740 };
+const TRAY_GAP = 18;
 
 const state = {
     solvedCount: 0,
@@ -109,31 +95,64 @@ document.addEventListener('DOMContentLoaded', () => {
     bindControls();
 });
 
-function buildLegend() {
-    const grid = document.getElementById('legendGrid');
-    if (!grid) return;
-    PROVINCES.forEach(p => {
-        const item = document.createElement('div');
-        item.className = 'legend-item';
-        item.innerHTML = `<span class="legend-dot" style="background:${p.color}"></span>${p.name}`;
-        grid.appendChild(item);
+// ------------------------------------------------------------------
+// 2. 좌표 계산 헬퍼
+// ------------------------------------------------------------------
+function toBoardPoints(rawPoints) {
+    return rawPoints.map(([x, y]) => [x + BOARD_OFFSET.x, y + BOARD_OFFSET.y]);
+}
+
+function bboxCenter(points) {
+    const xs = points.map(p => p[0]);
+    const ys = points.map(p => p[1]);
+    return [
+        (Math.min(...xs) + Math.max(...xs)) / 2,
+        (Math.min(...ys) + Math.max(...ys)) / 2
+    ];
+}
+
+function pointsToAttr(points) {
+    return points.map(p => p.join(',')).join(' ');
+}
+
+// 조각들의 실제 가로/세로 크기에 맞춰 줄바꿈하며 배치해 서로 겹치지 않게 함
+function packTray(sizes) {
+    let cursorX = TRAY_BOUNDS.x;
+    let cursorY = TRAY_BOUNDS.y;
+    let rowHeight = 0;
+    const positions = [];
+
+    sizes.forEach(({ width, height }) => {
+        if (cursorX !== TRAY_BOUNDS.x && cursorX + width > TRAY_BOUNDS.x + TRAY_BOUNDS.width) {
+            cursorX = TRAY_BOUNDS.x;
+            cursorY += rowHeight + TRAY_GAP;
+            rowHeight = 0;
+        }
+        positions.push([cursorX + width / 2, cursorY + height / 2]);
+        cursorX += width + TRAY_GAP;
+        rowHeight = Math.max(rowHeight, height);
     });
+
+    return positions;
 }
 
 // ------------------------------------------------------------------
-// 2. 보드(정답판) 및 조각 생성
+// 3. 보드(정답판) 및 조각 생성
 // ------------------------------------------------------------------
 function buildBoard() {
     PROVINCES.forEach(p => {
+        const boardPts = toBoardPoints(p.points);
+        const center = bboxCenter(boardPts);
+
         const poly = document.createElementNS(SVG_NS, 'polygon');
-        poly.setAttribute('points', p.points.map(pt => pt.join(',')).join(' '));
+        poly.setAttribute('points', pointsToAttr(boardPts));
         poly.setAttribute('class', 'slot');
         poly.dataset.id = p.id;
         boardLayer.appendChild(poly);
 
         const text = document.createElementNS(SVG_NS, 'text');
-        text.setAttribute('x', p.label[0]);
-        text.setAttribute('y', p.label[1]);
+        text.setAttribute('x', center[0]);
+        text.setAttribute('y', center[1]);
         text.setAttribute('class', 'slot-label');
         text.textContent = p.name;
         boardLayer.appendChild(text);
@@ -141,37 +160,51 @@ function buildBoard() {
 }
 
 function buildPieces() {
-    PROVINCES.forEach(p => {
+    const sizes = PROVINCES.map(p => {
+        const boardPts = toBoardPoints(p.points);
+        const xs = boardPts.map(pt => pt[0]);
+        const ys = boardPts.map(pt => pt[1]);
+        return { width: Math.max(...xs) - Math.min(...xs), height: Math.max(...ys) - Math.min(...ys) };
+    });
+    const trayTargets = packTray(sizes);
+
+    PROVINCES.forEach((p, i) => {
+        const boardPts = toBoardPoints(p.points);
+        const center = bboxCenter(boardPts);
+        const trayTarget = trayTargets[i];
+        const dx = trayTarget[0] - center[0];
+        const dy = trayTarget[1] - center[1];
+
         const g = document.createElementNS(SVG_NS, 'g');
         g.setAttribute('class', 'piece');
         g.dataset.id = p.id;
-        g.setAttribute('transform', `translate(${p.tray[0]},${p.tray[1]})`);
+        g.setAttribute('transform', `translate(${dx},${dy})`);
         g.setAttribute('tabindex', '0');
         g.setAttribute('role', 'button');
         g.setAttribute('aria-label', p.name + ' 조각');
 
         const poly = document.createElementNS(SVG_NS, 'polygon');
-        poly.setAttribute('points', p.points.map(pt => pt.join(',')).join(' '));
+        poly.setAttribute('points', pointsToAttr(boardPts));
         poly.setAttribute('fill', p.color);
         poly.setAttribute('class', 'piece-shape');
         g.appendChild(poly);
 
         const text = document.createElementNS(SVG_NS, 'text');
-        text.setAttribute('x', p.label[0]);
-        text.setAttribute('y', p.label[1]);
+        text.setAttribute('x', center[0]);
+        text.setAttribute('y', center[1]);
         text.setAttribute('class', 'piece-label');
         text.textContent = p.name;
         g.appendChild(text);
 
         piecesLayer.appendChild(g);
 
-        state.pieces.set(p.id, { el: g, dx: p.tray[0], dy: p.tray[1], solved: false });
+        state.pieces.set(p.id, { el: g, dx, dy, homeDx: dx, homeDy: dy, solved: false });
         attachDrag(g, p);
     });
 }
 
 // ------------------------------------------------------------------
-// 3. 드래그 앤 드롭 (포인터 이벤트: 마우스 + 터치 공용)
+// 4. 드래그 앤 드롭 (포인터 이벤트: 마우스 + 터치 공용)
 // ------------------------------------------------------------------
 function attachDrag(g, province) {
     let dragging = false;
@@ -219,8 +252,8 @@ function attachDrag(g, province) {
         if (!dragging) return;
         dragging = false;
 
-        const distance = Math.hypot(pieceState.dx, pieceState.dy);
-        if (distance <= SNAP_TOLERANCE) {
+        const homeDistance = Math.hypot(pieceState.dx, pieceState.dy);
+        if (homeDistance <= SNAP_TOLERANCE) {
             pieceState.dx = 0;
             pieceState.dy = 0;
             pieceState.solved = true;
@@ -246,7 +279,7 @@ function getSvgScale() {
 }
 
 // ------------------------------------------------------------------
-// 4. 진행 상황 / 완료 처리
+// 5. 진행 상황 / 완료 처리
 // ------------------------------------------------------------------
 function updateProgress() {
     const total = PROVINCES.length;
@@ -282,8 +315,19 @@ function spawnConfetti() {
     }
 }
 
+function buildLegend() {
+    const grid = document.getElementById('legendGrid');
+    if (!grid) return;
+    PROVINCES.forEach(p => {
+        const item = document.createElement('div');
+        item.className = 'legend-item';
+        item.innerHTML = `<span class="legend-dot" style="background:${p.color}"></span>${p.name}`;
+        grid.appendChild(item);
+    });
+}
+
 // ------------------------------------------------------------------
-// 5. 컨트롤 버튼 (다시 섞기 / 이름 숨기기 / 정답 보기 / 소리)
+// 6. 컨트롤 버튼 (다시 섞기 / 이름 숨기기 / 정답 보기 / 소리)
 // ------------------------------------------------------------------
 function bindControls() {
     document.getElementById('resetBtn').addEventListener('click', resetPuzzle);
@@ -318,8 +362,8 @@ function resetPuzzle() {
         const pieceState = state.pieces.get(p.id);
         const jitterX = (Math.random() - 0.5) * 24;
         const jitterY = (Math.random() - 0.5) * 24;
-        pieceState.dx = p.tray[0] + jitterX;
-        pieceState.dy = p.tray[1] + jitterY;
+        pieceState.dx = pieceState.homeDx + jitterX;
+        pieceState.dy = pieceState.homeDy + jitterY;
         pieceState.solved = false;
         pieceState.el.classList.remove('solved');
         pieceState.el.setAttribute('transform', `translate(${pieceState.dx},${pieceState.dy})`);
@@ -328,7 +372,7 @@ function resetPuzzle() {
 }
 
 // ------------------------------------------------------------------
-// 6. 소리 (Web Audio API - 외부 파일 없이 즉석 생성) + 한국어 음성 읽기
+// 7. 소리 (Web Audio API - 외부 파일 없이 즉석 생성) + 한국어 음성 읽기
 // ------------------------------------------------------------------
 let audioCtx = null;
 function getAudioCtx() {
