@@ -533,12 +533,12 @@ const vibeLecturesData = [
     },
     {
         id: 'lec-6',
-        title: '6. Antigravity로 교육 홈페이지 만들기',
+        title: '6. AI 코딩 파트너로 교육 홈페이지 만들기',
         diff: '중급',
         target: '자신의 교육 활동, 수업자료, 강의를 소개하고 싶은 교사',
         outcome: '개인 교육 포트폴리오 웹사이트 제작 및 공개',
-        tools: 'Antigravity / HTML / CSS / GitHub Pages',
-        desc: 'AI 코딩 파트너 Antigravity를 활용하여 나만의 멋진 개인 교육 브랜드 포트폴리오 사이트 완성'
+        tools: 'Antigravity, Claude Code, Codex / HTML / CSS / GitHub Pages',
+        desc: 'Antigravity, Claude Code, Codex 등 AI 코딩 파트너를 활용하여 나만의 멋진 개인 교육 브랜드 포트폴리오 사이트 완성'
     },
     {
         id: 'lec-7',
