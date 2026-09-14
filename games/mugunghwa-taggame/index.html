@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>무궁화 술래잡기</title>
-<meta name="description" content="전자칠판 웹캠으로 움직임을 감지하는 모션인식 버전 '무궁화 꽃이 피었습니다'. 인원을 정해 번호 자리에 서고, 얼음 상태에서 움직인 사람만 탈락. 10라운드를 버티면 성공.">
+<meta name="description" content="전자칠판 웹캠으로 움직임을 감지하는 모션인식 버전 '무궁화 꽃이 피었습니다'. 제자리에서 움직인 만큼 술래에게 다가가고, 게이지가 차면 터치 성공! 얼음 상태에서 움직이면 탈락.">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Gaegu:wght@400;700&family=Noto+Sans+KR:wght@400;500;700;900&display=swap">
 <style>
@@ -89,6 +89,26 @@
   }
   .zone.out .zone-chip{ display:none; }
   .zone.out .zone-out{ display:flex; }
+
+  /* ---- progress track: how close each player is to touching the tagger ---- */
+  .zone-track{
+    position:absolute; left:50%; bottom:21%; transform:translateX(-50%);
+    width:12px; height:40%; border-radius:999px;
+    background:rgba(247,240,227,.14); border:1px solid rgba(247,240,227,.24);
+    overflow:hidden; display:flex; align-items:flex-end; z-index:2;
+  }
+  .zone-fill{
+    width:100%; height:0%;
+    background:linear-gradient(to top, var(--hibiscus), var(--gold));
+    transition:height .25s ease;
+  }
+  .zone-pct{
+    position:absolute; left:50%; bottom:calc(21% + 40% + 8px); transform:translateX(-50%);
+    font-family:'Noto Sans KR', sans-serif; font-weight:800; font-size:clamp(.72rem,1.15vw,.9rem);
+    color:var(--gold); background:rgba(15,12,24,.58); padding:.1rem .55rem; border-radius:999px;
+    white-space:nowrap;
+  }
+  .zone.out .zone-track, .zone.out .zone-pct{ display:none; }
 
   /* ---- state banner ---- */
   .banner{ position:absolute; top:4.2%; left:50%; transform:translateX(-50%); z-index:6; text-align:center; width:min(92vw, 780px); }
@@ -257,7 +277,7 @@
   <div class="hud">
     <div class="pill">라운드 <span class="num" id="roundNum">0</span>/<span id="targetNum">10</span></div>
     <div class="pill alive">생존 <span class="num" id="aliveNum">0</span>/<span id="totalNum">0</span></div>
-    <div class="pill best">최고 기록 <span class="num" id="bestNum">0</span></div>
+    <div class="pill best">최소 터치 라운드 <span class="num" id="bestNum">-</span></div>
   </div>
 
   <div class="prep-bar" id="prepBar" hidden>
@@ -272,10 +292,10 @@
       <h1 class="title-main">무궁화 꽃이<br><span class="accent">피었습니다</span></h1>
       <div class="rules">
         <b>1.</b> 인원을 정하고 ‘시작하기’를 누른 뒤 카메라·소리 권한을 <b>허용</b>해주세요.<br>
-        <b>2.</b> 화면에 나오는 번호 자리에 한 명씩 서주세요.<br>
-        <b>3.</b> 술래가 노래를 외는 동안엔 마음껏 움직여도 좋아요.<br>
-        <b>4.</b> 술래가 뒤돌아 <b>“얼음!”</b>이라고 할 때 움직이면, <b>그 사람만</b> 그 자리에서 탈락해요.<br>
-        <b>5.</b> 탈락하지 않고 <b>10라운드</b>까지 버티면 성공!
+        <b>2.</b> 화면에 나오는 번호 자리에 한 명씩 서주세요. <b>걸어 나가지 말고 그 자리</b>에서 게임해요.<br>
+        <b>3.</b> 술래가 노래를 외는 동안, <b>제자리에서 힘차게</b> 움직이면(팔 흔들기, 점프 등) 술래에게 점점 가까워져요.<br>
+        <b>4.</b> 막대 게이지가 가득 차면 <b>술래를 터치해서 성공!</b><br>
+        <b>5.</b> 술래가 뒤돌아 <b>“얼음!”</b>이라고 할 때 움직이면, <b>그 사람만</b> 그 자리에서 탈락해요.
       </div>
       <div class="setup-row">
         인원
@@ -289,7 +309,7 @@
         <span id="sensVal">5</span>
       </div>
       <button class="cta" id="startBtn">시작하기</button>
-      <div class="note" id="startNote">※ 전자칠판이나 PC의 웹캠·스피커를 사용해요. 모든 인원이 카메라에 보이도록 서주세요.</div>
+      <div class="note" id="startNote">※ 전자칠판이나 PC의 웹캠·스피커를 사용해요. 모든 인원이 카메라에 보이도록 서고, <b>제자리에서</b> 움직이며 전진해요 (걸어 나가지 않아도 돼요!).</div>
     </div>
   </div>
 
@@ -335,27 +355,33 @@
   const prepStartBtn = document.getElementById('prepStartBtn');
 
   const CHANT = '무궁화 꽃이 피었습니다';
-  const BEST_KEY = 'mugunghwa-best-round';
+  const BEST_KEY = 'mugunghwa-best-touch-round';
   const TARGET_ROUNDS = 10;
+  const PROGRESS_FLOOR = 3; // ignore small camera noise/jitter
   const MELODY = [329.63, 392.00, 440.00, 392.00, 493.88, 440.00, 392.00, 329.63]; // E-pentatonic playground riff
 
   let playerCount = 4;
   let players = [];
-  let round = 0, gameState = 'idle', motionActive = false;
+  let round = 0, gameState = 'idle', motionActive = false, progressActive = false;
   let freezeTimer = null, resolveFreezeFn = null, motionLoopId = null, tuneTimer = null, tuneStep = 0;
   let prevFrame = null, muted = false, audioCtx = null, currentTuneMs = 340;
-  let threshold = 14;
+  let threshold = 14, progressRate = 0.05;
 
-  bestNum.textContent = localStorage.getItem(BEST_KEY) || '0';
+  const savedBest = localStorage.getItem(BEST_KEY);
+  bestNum.textContent = savedBest || '-';
 
   playersMinus.addEventListener('click', () => { playerCount = Math.max(1, playerCount - 1); playersVal.textContent = playerCount; });
   playersPlus.addEventListener('click', () => { playerCount = Math.min(8, playerCount + 1); playersVal.textContent = playerCount; });
 
+  function applySensitivity(s){
+    threshold = 24 - (s * 1.7);
+    progressRate = 0.025 + s * 0.007; // higher sensitivity = faster progress gauge fill
+  }
   sensSlider.addEventListener('input', () => {
     sensVal.textContent = sensSlider.value;
-    threshold = 24 - (parseInt(sensSlider.value,10) * 1.7);
+    applySensitivity(parseInt(sensSlider.value,10));
   });
-  threshold = 24 - (parseInt(sensSlider.value,10) * 1.7);
+  applySensitivity(parseInt(sensSlider.value,10));
 
   function setMuteIcon(){
     muteBtn.innerHTML = muted
@@ -486,10 +512,15 @@
       z.className = 'zone';
       z.style.left = (i * w) + '%';
       z.style.width = w + '%';
-      z.innerHTML = '<div class="zone-chip">' + (i + 1) + '번</div>' +
+      z.innerHTML = '<div class="zone-pct">0%</div>' +
+                    '<div class="zone-track"><div class="zone-fill"></div></div>' +
+                    '<div class="zone-chip">' + (i + 1) + '번</div>' +
                     '<div class="zone-out">탈락<br>' + (i + 1) + '번</div>';
       zonesLayer.appendChild(z);
-      players.push({ index: i, out: false, el: z });
+      players.push({
+        index: i, out: false, touched: false, progress: 0, el: z,
+        fillEl: z.querySelector('.zone-fill'), pctEl: z.querySelector('.zone-pct')
+      });
     }
     aliveNum.textContent = playerCount;
     totalNum.textContent = playerCount;
@@ -515,6 +546,22 @@
     }
   }
 
+  function updateProgressBar(p){
+    if (p.fillEl) p.fillEl.style.height = p.progress + '%';
+    if (p.pctEl) p.pctEl.textContent = Math.round(p.progress) + '%';
+  }
+
+  function addProgress(p, intensity){
+    const gain = Math.max(0, intensity - PROGRESS_FLOOR) * progressRate;
+    if (gain <= 0) return;
+    p.progress = Math.min(100, p.progress + gain);
+    updateProgressBar(p);
+    if (p.progress >= 100 && !p.touched){
+      p.touched = true;
+      handleTouchWin(p);
+    }
+  }
+
   function sampleMotion(){
     if (video.readyState < 2) return;
     const w = analysisCanvas.width;
@@ -524,7 +571,7 @@
     actx.drawImage(video, 0, 0, w, ANALYSIS_H);
     actx.restore();
     const frame = actx.getImageData(0, 0, w, ANALYSIS_H).data;
-    if (prevFrame && prevFrame.length === frame.length && motionActive){
+    if (prevFrame && prevFrame.length === frame.length && (motionActive || progressActive)){
       const zoneWidthPx = w / playerCount;
       for (const p of players){
         if (p.out) continue;
@@ -541,7 +588,14 @@
             count++;
           }
         }
-        if (count && (diffSum / count) > threshold) eliminatePlayer(p);
+        if (!count) continue;
+        const intensity = diffSum / count;
+        if (motionActive){
+          if (intensity > threshold) eliminatePlayer(p);
+        } else if (progressActive){
+          addProgress(p, intensity);
+          if (gameState !== 'go') break;
+        }
       }
     }
     prevFrame = frame;
@@ -596,12 +650,14 @@
     roundNum.textContent = round;
     setVisualState('go');
     taggerLabel.textContent = '뒤돌아 있음';
-    subText.textContent = '지금은 모두 움직여도 안전해요';
+    subText.textContent = '제자리에서 힘차게 움직이며 술래에게 다가가요!';
     popText(CHANT);
 
+    progressActive = true;
     startTune(Math.max(230, 420 - round * 8));
     const rate = Math.min(1.55, 0.85 + round * 0.03 + Math.random() * 0.2);
     await speakChant(rate);
+    progressActive = false;
     if (gameState !== 'go') return;
 
     stopTune();
@@ -625,7 +681,7 @@
   function finishRoundCheck(){
     const remaining = players.filter(p => !p.out).length;
     if (remaining === 0){ handleGameOver('wipeout'); return; }
-    if (round >= TARGET_ROUNDS){ handleGameOver('success'); return; }
+    if (round >= TARGET_ROUNDS){ handleGameOver('timeout'); return; }
     setVisualState('clear');
     showToast('통과!');
     beep(660, 0.15, 'sine');
@@ -633,23 +689,33 @@
     setTimeout(() => { if (gameState === 'go') runRound(); }, 550);
   }
 
-  function handleGameOver(kind){
+  function handleTouchWin(p){
+    if (gameState !== 'go') return;
+    handleGameOver('touch', p);
+  }
+
+  function handleGameOver(kind, touchedPlayer){
+    if (gameState === 'over') return;
     gameState = 'over';
+    progressActive = false;
     clearTimeout(freezeTimer);
     clearTimeout(motionLoopId);
     stopTune();
     if ('speechSynthesis' in window) speechSynthesis.cancel();
 
-    const survivors = players.filter(p => !p.out).map(p => p.index + 1);
-    const best = parseInt(localStorage.getItem(BEST_KEY) || '0', 10);
-    const reached = kind === 'success' ? TARGET_ROUNDS : round;
-    if (reached > best){ localStorage.setItem(BEST_KEY, String(reached)); bestNum.textContent = reached; }
+    if (kind === 'touch'){
+      const best = parseInt(localStorage.getItem(BEST_KEY) || '0', 10);
+      if (!best || round < best){ localStorage.setItem(BEST_KEY, String(round)); bestNum.textContent = round; }
+    }
 
-    endEmote.classList.toggle('success', kind === 'success');
-    if (kind === 'success'){
-      endEmote.textContent = '성공!';
-      endResult.innerHTML = (survivors.length ? survivors.join('번, ') + '번' : '모두') +
-        ' 살아남아 <span class="num">' + TARGET_ROUNDS + '</span>라운드를 버텼어요!';
+    endEmote.classList.toggle('success', kind === 'touch');
+    if (kind === 'touch'){
+      endEmote.textContent = '터치 성공!';
+      endResult.innerHTML = (touchedPlayer.index + 1) + '번 친구가 <span class="num">' + round +
+        '</span>라운드만에 술래를 터치했어요! 우리 팀 승리 🎉';
+    } else if (kind === 'timeout'){
+      endEmote.textContent = '아쉬워요!';
+      endResult.innerHTML = '<span class="num">' + TARGET_ROUNDS + '</span>라운드까지 아무도 술래를 터치하지 못했어요. 다음엔 더 힘차게 움직여봐요!';
     } else {
       endEmote.textContent = '전원 탈락!';
       endResult.innerHTML = '라운드 <span class="num">' + round + '</span>에서 모두 탈락했어요.';
