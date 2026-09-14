@@ -153,9 +153,9 @@
     gap:6px;
   }
   #camFrame{
-    width:96px;
-    height:96px;
-    border-radius:50%;
+    width:clamp(160px,30vw,260px);
+    aspect-ratio:4/3;
+    border-radius:16px;
     overflow:hidden;
     border:2px solid var(--glass-border);
     box-shadow:0 6px 20px rgba(0,0,0,0.35);
@@ -334,7 +334,7 @@
 
   <div id="camWidget">
     <div id="camFrame">
-      <canvas id="camPreview" width="96" height="96"></canvas>
+      <canvas id="camPreview" width="240" height="180"></canvas>
     </div>
     <div id="camStatus">대기 중</div>
     <button id="modeToggle" type="button">🖱 마우스로 전환</button>
@@ -813,6 +813,8 @@
   var lastMotionAt = 0;
   var MOTION_GAIN_X = 1.9;
   var MOTION_GAIN_Y = 1.6;
+  var GUIDE_X0 = 0.5 - 0.5/MOTION_GAIN_X, GUIDE_X1 = 0.5 + 0.5/MOTION_GAIN_X;
+  var GUIDE_Y0 = 0.5 - 0.5/MOTION_GAIN_Y, GUIDE_Y1 = 0.5 + 0.5/MOTION_GAIN_Y;
   function basketFollowRate(){
     return controlMode === 'motion' ? 9 : 22;
   }
@@ -872,29 +874,39 @@
           for (var x=0;x<w;x++){
             var idx = (y*w+x)*4;
             var diff = Math.abs(data[idx]-pdata[idx]) + Math.abs(data[idx+1]-pdata[idx+1]) + Math.abs(data[idx+2]-pdata[idx+2]);
-            if (diff > 45){
+            if (diff > 50){
               sumX += x; sumY += y; count++;
             }
           }
         }
-        if (count > 12){
+        if (count > 20){
           var nx = sumX/count/w;
           var ny = sumY/count/h;
-          motionTargetNorm.x = motionTargetNorm.x*0.55 + nx*0.45;
-          motionTargetNorm.y = motionTargetNorm.y*0.55 + ny*0.45;
+          motionTargetNorm.x = motionTargetNorm.x*0.7 + nx*0.3;
+          motionTargetNorm.y = motionTargetNorm.y*0.7 + ny*0.3;
           lastMotionAt = performance.now();
         }
       }
       prevFrame = frame;
 
+      camCtx.save();
+      camCtx.setLineDash([5,5]);
+      camCtx.strokeStyle = 'rgba(253,246,242,0.55)';
+      camCtx.lineWidth = 1.5;
+      camCtx.strokeRect(
+        camPreview.width*GUIDE_X0, camPreview.height*GUIDE_Y0,
+        camPreview.width*(GUIDE_X1-GUIDE_X0), camPreview.height*(GUIDE_Y1-GUIDE_Y0)
+      );
+      camCtx.restore();
+
       var dotX = camPreview.width * motionTargetNorm.x;
       var dotY = camPreview.height * motionTargetNorm.y;
       camCtx.beginPath();
       camCtx.fillStyle = 'rgba(242,166,194,0.9)';
-      camCtx.arc(dotX, dotY, 6, 0, Math.PI*2);
+      camCtx.arc(dotX, dotY, 9, 0, Math.PI*2);
       camCtx.fill();
       camCtx.strokeStyle = 'rgba(253,246,242,0.9)';
-      camCtx.lineWidth = 2;
+      camCtx.lineWidth = 2.5;
       camCtx.stroke();
 
       if (controlMode === 'motion'){
