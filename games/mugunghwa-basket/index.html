@@ -140,6 +140,14 @@
     transition:width 0.25s ease;
   }
   #basketMeter .num{font-size:0.78rem;}
+  #basketMeter .doneStat{border-left:1px solid var(--glass-border);padding-left:10px;}
+  #basketMeter .doneStat .num{color:var(--petal-pink);}
+  #basketMeter .doneStat.bump{animation:doneBump 0.4s ease;}
+  @keyframes doneBump{
+    0%{transform:scale(1);}
+    40%{transform:scale(1.35);}
+    100%{transform:scale(1);}
+  }
 
   /* ---------- Camera widget ---------- */
   #camWidget{
@@ -222,6 +230,25 @@
     height:192px;
     margin:-6px auto 6px;
     filter:drop-shadow(0 10px 22px rgba(0,0,0,0.45));
+  }
+  #basketDoneImg.popAnim{ animation:popIn 0.55s cubic-bezier(.34,1.56,.64,1); }
+  @keyframes popIn{
+    0%{transform:scale(0.55);opacity:0;}
+    60%{transform:scale(1.1);opacity:1;}
+    100%{transform:scale(1);opacity:1;}
+  }
+
+  #celebrateFlash{
+    position:absolute; inset:0; z-index:9;
+    background:radial-gradient(circle at 50% 45%, rgba(253,246,242,0.55), rgba(242,166,194,0.25) 40%, rgba(242,166,194,0) 70%);
+    opacity:0;
+    pointer-events:none;
+  }
+  #celebrateFlash.flash{ animation:flashPop 0.6s ease; }
+  @keyframes flashPop{
+    0%{opacity:0;}
+    25%{opacity:1;}
+    100%{opacity:0;}
   }
   .panel h1{
     font-size:clamp(1.8rem,6vw,2.5rem);
@@ -308,6 +335,9 @@
   @media (prefers-reduced-motion:reduce){
     .btn{transition:none;}
     #toast{transition:none;}
+    #basketDoneImg.popAnim{animation:none;}
+    #celebrateFlash.flash{animation:none;}
+    #basketMeter .doneStat.bump{animation:none;}
   }
 </style>
 </head>
@@ -324,6 +354,7 @@
     <div class="pill" id="basketMeter">
       <div class="stat"><span class="num" id="basketNum">0 / 15</span><span class="lbl">바구니</span></div>
       <div class="track"><div class="fill" id="basketFill" style="width:0%"></div></div>
+      <div class="stat doneStat"><span class="num" id="doneNum">0</span><span class="lbl">완성 🏆</span></div>
     </div>
     <div class="pill">
       <div id="lives" aria-label="남은 생명"><span>🌺</span><span>🌺</span><span>🌺</span></div>
@@ -331,6 +362,7 @@
   </div>
 
   <div id="toast"></div>
+  <div id="celebrateFlash"></div>
 
   <div id="camWidget">
     <div id="camFrame">
@@ -361,7 +393,7 @@
     </div>
 
     <div class="panel" id="panelOver" hidden>
-      <h1>바구니를 놓쳤어요</h1>
+      <h1 id="panelOverTitle">바구니를 놓쳤어요</h1>
       <div class="resultGrid">
         <div class="item"><div class="num" id="finalScore">0</div><div class="lbl">받은 꽃잎</div></div>
         <div class="item"><div class="num" id="finalBaskets">0</div><div class="lbl">완성한 바구니</div></div>
@@ -393,6 +425,9 @@
   var basketNum = document.getElementById('basketNum');
   var basketFillEl = document.getElementById('basketFill');
   var livesEl = document.getElementById('lives');
+  var doneNum = document.getElementById('doneNum');
+  var doneStatEl = doneNum.closest('.doneStat');
+  var celebrateFlash = document.getElementById('celebrateFlash');
 
   var overlay = document.getElementById('overlay');
   var panelStart = document.getElementById('panelStart');
@@ -400,6 +435,7 @@
   var basketDoneText = document.getElementById('basketDoneText');
   var basketDoneImg = document.getElementById('basketDoneImg');
   var panelOver = document.getElementById('panelOver');
+  var panelOverTitle = document.getElementById('panelOverTitle');
   var finalScore = document.getElementById('finalScore');
   var finalBaskets = document.getElementById('finalBaskets');
   var finalBest = document.getElementById('finalBest');
@@ -605,6 +641,33 @@
     ctx.globalAlpha = 1;
   }
 
+  // ---------------- Floating score/combo popups ----------------
+  var popups = [];
+  function spawnPopup(x, y, text, color, size){
+    popups.push({ x:x, y:y, text:text, color:color||'#fdf6f2', size:size||20, life:1 });
+  }
+  function updatePopups(dt){
+    for (var i=popups.length-1;i>=0;i--){
+      var p = popups[i];
+      p.y -= 42*dt;
+      p.life -= dt*1.1;
+      if (p.life<=0) popups.splice(i,1);
+    }
+  }
+  function drawPopups(){
+    ctx.save();
+    ctx.textAlign = 'center';
+    for (var i=0;i<popups.length;i++){
+      var p = popups[i];
+      ctx.globalAlpha = Math.max(p.life,0);
+      ctx.fillStyle = p.color;
+      ctx.font = "700 " + p.size + "px 'Gowun Batang', serif";
+      ctx.fillText(p.text, p.x, p.y);
+    }
+    ctx.restore();
+    ctx.globalAlpha = 1;
+  }
+
   // ---------------- Ambient background petals ----------------
   var ambient = [];
   function seedAmbient(){
@@ -636,6 +699,42 @@
     }
   }
 
+  // ---------------- Sound effects (WebAudio synth, no assets) ----------------
+  var audioCtx = null;
+  function unlockAudio(){
+    if (!audioCtx){
+      try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch(e){ audioCtx = null; }
+    } else if (audioCtx.state === 'suspended'){
+      audioCtx.resume();
+    }
+  }
+  function playTone(freq, duration, type, gain, delay){
+    if (!audioCtx) return;
+    var t0 = audioCtx.currentTime + (delay||0);
+    var osc = audioCtx.createOscillator();
+    var g = audioCtx.createGain();
+    osc.type = type || 'sine';
+    osc.frequency.setValueAtTime(freq, t0);
+    g.gain.setValueAtTime(0.0001, t0);
+    g.gain.exponentialRampToValueAtTime(gain||0.15, t0+0.02);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0+duration);
+    osc.connect(g); g.connect(audioCtx.destination);
+    osc.start(t0); osc.stop(t0+duration+0.03);
+  }
+  function sfxCatch(){ playTone(880, 0.1, 'sine', 0.1); }
+  function sfxCombo(){ playTone(988, 0.12, 'triangle', 0.12); playTone(1318, 0.16, 'triangle', 0.1, 0.07); }
+  function sfxBasketDone(){
+    playTone(659, 0.16, 'triangle', 0.15, 0);
+    playTone(784, 0.16, 'triangle', 0.15, 0.12);
+    playTone(988, 0.28, 'triangle', 0.17, 0.24);
+  }
+  function sfxMiss(){ playTone(220, 0.18, 'sawtooth', 0.08); }
+  function sfxGameOver(){
+    playTone(392, 0.22, 'sine', 0.12, 0);
+    playTone(330, 0.22, 'sine', 0.12, 0.18);
+    playTone(262, 0.38, 'sine', 0.12, 0.36);
+  }
+
   // ---------------- Game state ----------------
   var STATE = { MENU:'menu', PLAYING:'playing', BASKET_DONE:'basketDone', OVER:'over' };
   var state = STATE.MENU;
@@ -643,6 +742,8 @@
   var score = 0, lives = 3, basketsCompleted = 0;
   var basketFill = 0, basketGoal = 15;
   var difficulty = 0;
+  var streak = 0;
+  var newBestShown = false;
 
   var basket = { x:0, y:0, tx:0, ty:0 };
   var yMin, yMax, xMin, xMax;
@@ -668,7 +769,8 @@
   function resetRun(){
     score = 0; lives = 3; basketsCompleted = 0;
     basketFill = 0; basketGoal = 15; difficulty = 0;
-    gamePetals = []; particles = [];
+    streak = 0; newBestShown = false;
+    gamePetals = []; particles = []; popups = [];
     spawnInterval = 1150; fallSpeed = 95;
     updateHUD();
   }
@@ -677,11 +779,18 @@
     scoreNum.textContent = score;
     basketNum.textContent = basketFill + ' / ' + basketGoal;
     basketFillEl.style.width = Math.min(100, (basketFill/basketGoal)*100) + '%';
+    doneNum.textContent = basketsCompleted;
     var hearts = '';
     for (var i=0;i<3;i++){
       hearts += '<span' + (i<lives?'':' class="lost"') + '>🌺</span>';
     }
     livesEl.innerHTML = hearts;
+  }
+
+  function restartAnim(el, cls){
+    el.classList.remove(cls);
+    void el.offsetWidth;
+    el.classList.add(cls);
   }
 
   function showToast(msg){
@@ -712,6 +821,8 @@
 
   function loseLife(){
     lives -= 1;
+    streak = 0;
+    sfxMiss();
     updateHUD();
     if (lives<=0){
       endRun();
@@ -721,7 +832,19 @@
   function catchPetal(p){
     score += 1;
     basketFill += 1;
+    streak += 1;
     burst(p.x, p.y);
+    spawnPopup(p.x, p.y - 6, '+1', 'rgba(253,246,242,0.95)', 18);
+    if (streak > 0 && streak % 5 === 0){
+      spawnPopup(p.x, p.y - 30, streak + '연속! 🌟', '#ffe27a', 22);
+      sfxCombo();
+    } else {
+      sfxCatch();
+    }
+    if (!newBestShown && best > 0 && score === best + 1){
+      newBestShown = true;
+      showToast('최고 기록 경신 중! 🎉');
+    }
     updateHUD();
     if (basketFill >= basketGoal){
       completeBasket();
@@ -764,7 +887,12 @@
     burst(basket.x, basket.y - BASKET_H*0.3);
     burst(basket.x - BASKET_W*0.3, basket.y - BASKET_H*0.15);
     burst(basket.x + BASKET_W*0.3, basket.y - BASKET_H*0.15);
+    sfxBasketDone();
+    restartAnim(celebrateFlash, 'flash');
+    updateHUD();
+    restartAnim(doneStatEl, 'bump');
     openPanel(panelBasketDone);
+    restartAnim(basketDoneImg, 'popAnim');
   }
 
   function nextBasket(){
@@ -780,13 +908,16 @@
 
   function endRun(){
     state = STATE.OVER;
-    if (score > best){
+    var isNewBest = score > best;
+    if (isNewBest){
       best = score;
       try { localStorage.setItem(BEST_KEY, String(best)); } catch(e){}
     }
     finalScore.textContent = score;
     finalBaskets.textContent = basketsCompleted;
     finalBest.textContent = best;
+    panelOverTitle.textContent = isNewBest ? '최고 기록을 새로 썼어요! 🏆' : '바구니를 놓쳤어요';
+    sfxGameOver();
     openPanel(panelOver);
   }
 
@@ -979,6 +1110,7 @@
 
     updateAmbient(dt);
     updateParticles(dt);
+    updatePopups(dt);
 
     if (state === STATE.PLAYING){
       applyKeyboard(dt);
@@ -1035,6 +1167,7 @@
 
     drawBasket(basket.x, basket.y, basketFill, basketGoal);
     drawParticles();
+    drawPopups();
   }
 
   // ---------------- Boot ----------------
@@ -1047,6 +1180,7 @@
   }
 
   document.getElementById('btnStartCam').addEventListener('click', function(){
+    unlockAudio();
     resetRun();
     layoutBasketBounds();
     initCamera().then(function(){
@@ -1059,6 +1193,7 @@
   });
 
   document.getElementById('btnStartMouse').addEventListener('click', function(){
+    unlockAudio();
     resetRun();
     layoutBasketBounds();
     fallbackToMouse('마우스나 터치로 바구니를 옮겨보세요.');
