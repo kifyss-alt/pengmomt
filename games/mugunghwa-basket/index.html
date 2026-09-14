@@ -269,6 +269,19 @@
   }
   .panel .howto b{color:var(--petal-pink);font-weight:700;}
 
+  .titleLine{
+    font-size:0.88rem;
+    font-weight:700;
+    color:var(--petal-pink);
+    margin:-10px 0 22px;
+  }
+  .titleLine.newTitle{ animation:titlePop 0.6s ease; }
+  @keyframes titlePop{
+    0%{ transform:scale(0.7); opacity:0; }
+    55%{ transform:scale(1.15); opacity:1; }
+    100%{ transform:scale(1); }
+  }
+
   .btn{
     font-family:'Gowun Dodum',sans-serif;
     font-size:0.98rem;
@@ -338,6 +351,7 @@
     #basketDoneImg.popAnim{animation:none;}
     #celebrateFlash.flash{animation:none;}
     #basketMeter .doneStat.bump{animation:none;}
+    .titleLine.newTitle{animation:none;}
   }
 </style>
 </head>
@@ -385,8 +399,9 @@
 
     <div class="panel" id="panelBasketDone" hidden>
       <img id="basketDoneImg" alt="완성된 무궁화 바구니" width="220" height="192">
-      <h1>바구니 완성!</h1>
+      <h1 id="basketDoneTitle">바구니 완성!</h1>
       <p class="tagline" id="basketDoneText">무궁화 꽃잎 열다섯 장이 소담히 모였습니다.</p>
+      <p class="titleLine" id="basketDoneTitleLine">현재 칭호: 무궁화 새싹 손님</p>
       <div class="btnRow">
         <button class="btn" id="btnNextBasket" type="button">다음 바구니 엮기</button>
       </div>
@@ -399,6 +414,7 @@
         <div class="item"><div class="num" id="finalBaskets">0</div><div class="lbl">완성한 바구니</div></div>
         <div class="item"><div class="num" id="finalBest">0</div><div class="lbl">최고 기록</div></div>
       </div>
+      <p class="titleLine" id="finalTitleLine">획득한 칭호: 무궁화 새싹 손님</p>
       <div class="btnRow">
         <button class="btn" id="btnRetry" type="button">다시 도전하기</button>
       </div>
@@ -432,13 +448,16 @@
   var overlay = document.getElementById('overlay');
   var panelStart = document.getElementById('panelStart');
   var panelBasketDone = document.getElementById('panelBasketDone');
+  var basketDoneTitle = document.getElementById('basketDoneTitle');
   var basketDoneText = document.getElementById('basketDoneText');
+  var basketDoneTitleLine = document.getElementById('basketDoneTitleLine');
   var basketDoneImg = document.getElementById('basketDoneImg');
   var panelOver = document.getElementById('panelOver');
   var panelOverTitle = document.getElementById('panelOverTitle');
   var finalScore = document.getElementById('finalScore');
   var finalBaskets = document.getElementById('finalBaskets');
   var finalBest = document.getElementById('finalBest');
+  var finalTitleLine = document.getElementById('finalTitleLine');
 
   var BEST_KEY = 'mugunghwa-basket-best';
   var best = 0;
@@ -607,6 +626,46 @@
     ctx.restore();
   }
 
+  // ---------------- Garden shelf (persistent trophy row of finished baskets) ----------------
+  var finishedBaskets = [];
+  var SHELF_START_X = 26, SHELF_GAP = 42, SHELF_ROW_GAP = 36, SHELF_MARGIN_BOTTOM = 20;
+  function shelfPositionFor(index){
+    var perRow = Math.max(3, Math.floor((W - SHELF_START_X*2) / SHELF_GAP));
+    var row = Math.floor(index / perRow);
+    var col = index % perRow;
+    return {
+      x: SHELF_START_X + col*SHELF_GAP,
+      y: (H - SHELF_MARGIN_BOTTOM) - row*SHELF_ROW_GAP
+    };
+  }
+  function drawShelf(){
+    if (!finishedBaskets.length) return;
+    var savedW = BASKET_W, savedH = BASKET_H;
+    BASKET_W = 34; BASKET_H = BASKET_W*0.72;
+    for (var i=0;i<finishedBaskets.length;i++){
+      var fb = finishedBaskets[i];
+      drawBasket(fb.x, fb.y, 1, 1);
+    }
+    BASKET_W = savedW; BASKET_H = savedH;
+  }
+
+  // ---------------- Titles (grow with baskets completed this run) ----------------
+  var TITLES = [
+    { min:0,  label:'무궁화 새싹 손님' },
+    { min:1,  label:'무궁화 새싹 정원사 🌱' },
+    { min:3,  label:'무궁화 꽃친구 🌸' },
+    { min:5,  label:'무궁화 지킴이 🌺' },
+    { min:10, label:'삼천리 정원사 👑' },
+    { min:20, label:'무궁화 마을의 전설 ✨' }
+  ];
+  function titleFor(count){
+    var label = TITLES[0].label;
+    for (var i=0;i<TITLES.length;i++){
+      if (count >= TITLES[i].min) label = TITLES[i].label;
+    }
+    return label;
+  }
+
   // ---------------- Particles ----------------
   var particles = [];
   function burst(x,y){
@@ -770,7 +829,7 @@
     score = 0; lives = 3; basketsCompleted = 0;
     basketFill = 0; basketGoal = 15; difficulty = 0;
     streak = 0; newBestShown = false;
-    gamePetals = []; particles = []; popups = [];
+    gamePetals = []; particles = []; popups = []; finishedBaskets = [];
     spawnInterval = 1150; fallSpeed = 95;
     updateHUD();
   }
@@ -877,22 +936,32 @@
     state = STATE.BASKET_DONE;
     basketsCompleted += 1;
     difficulty += 1;
+    finishedBaskets.push(shelfPositionFor(finishedBaskets.length));
+
+    var prevTitle = titleFor(basketsCompleted - 1);
+    var curTitle = titleFor(basketsCompleted);
+    var gotNewTitle = curTitle !== prevTitle;
+
     var lines = [
       '무궁화 꽃잎 ' + basketGoal + '장이 소담히 모였습니다.',
       '바구니 가득, 하루의 꽃이 모두 담겼습니다.',
       '삼천리 위로 흩날린 꽃잎이 바구니를 채웠습니다.'
     ];
-    basketDoneText.textContent = lines[Math.min(basketsCompleted-1, lines.length-1)] + ' (' + basketsCompleted + '번째 바구니)';
+    basketDoneTitle.textContent = gotNewTitle ? '새 칭호를 얻었어요! 🎉' : '바구니 완성!';
+    basketDoneText.textContent = lines[Math.min(basketsCompleted-1, lines.length-1)] + ' (' + basketsCompleted + '번째 바구니, 정원 진열장에 추가됨)';
+    basketDoneTitleLine.textContent = (gotNewTitle ? '🎉 새 칭호: ' : '현재 칭호: ') + curTitle;
     basketDoneImg.src = renderBasketPortrait(basketGoal);
     burst(basket.x, basket.y - BASKET_H*0.3);
     burst(basket.x - BASKET_W*0.3, basket.y - BASKET_H*0.15);
     burst(basket.x + BASKET_W*0.3, basket.y - BASKET_H*0.15);
+    if (gotNewTitle) burst(basket.x, basket.y - BASKET_H*0.55);
     sfxBasketDone();
     restartAnim(celebrateFlash, 'flash');
     updateHUD();
     restartAnim(doneStatEl, 'bump');
     openPanel(panelBasketDone);
     restartAnim(basketDoneImg, 'popAnim');
+    if (gotNewTitle) restartAnim(basketDoneTitleLine, 'newTitle');
   }
 
   function nextBasket(){
@@ -916,6 +985,7 @@
     finalScore.textContent = score;
     finalBaskets.textContent = basketsCompleted;
     finalBest.textContent = best;
+    finalTitleLine.textContent = '획득한 칭호: ' + titleFor(basketsCompleted);
     panelOverTitle.textContent = isNewBest ? '최고 기록을 새로 썼어요! 🏆' : '바구니를 놓쳤어요';
     sfxGameOver();
     openPanel(panelOver);
@@ -1159,6 +1229,7 @@
   function render(){
     drawSky();
     drawAmbient();
+    drawShelf();
 
     for (var i=0;i<gamePetals.length;i++){
       var p = gamePetals[i];
