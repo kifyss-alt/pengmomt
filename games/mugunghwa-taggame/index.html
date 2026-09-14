@@ -108,7 +108,21 @@
     color:var(--gold); background:rgba(15,12,24,.58); padding:.1rem .55rem; border-radius:999px;
     white-space:nowrap;
   }
-  .zone.out .zone-track, .zone.out .zone-pct{ display:none; }
+  .zone-runner{
+    position:absolute; left:50%; bottom:21%; transform:translate(-50%, 45%);
+    font-size:clamp(1.15rem, 2.3vw, 1.7rem); line-height:1; z-index:3; pointer-events:none;
+    transition:bottom .25s ease, filter .2s ease;
+    filter:drop-shadow(0 3px 5px rgba(0,0,0,.55)) grayscale(.15);
+  }
+  .zone-runner.active{
+    animation:runner-bounce .32s ease-in-out infinite;
+    filter:drop-shadow(0 3px 6px rgba(0,0,0,.55)) grayscale(0);
+  }
+  @keyframes runner-bounce{
+    0%,100%{ transform:translate(-50%, 45%) scale(1) rotate(-4deg); }
+    50%{ transform:translate(-50%, calc(45% - 7px)) scale(1.12) rotate(4deg); }
+  }
+  .zone.out .zone-track, .zone.out .zone-pct, .zone.out .zone-runner{ display:none; }
 
   /* ---- state banner ---- */
   .banner{ position:absolute; top:4.2%; left:50%; transform:translateX(-50%); z-index:6; text-align:center; width:min(92vw, 780px); }
@@ -226,7 +240,7 @@
   .toast.show{ opacity:1; transform:translate(-50%,0); }
 
   @media (prefers-reduced-motion: reduce){
-    video, .taggerFig svg, .state-go .taggerFig, button.cta, .toast, .banner .chant.pop{ animation:none !important; transition:none !important; }
+    video, .taggerFig svg, .state-go .taggerFig, button.cta, .toast, .banner .chant.pop, .zone-runner{ animation:none !important; transition:none !important; }
   }
   @media (max-width: 760px){
     .taggerbox{ right:1.5%; width:clamp(110px,24vw,190px); }
@@ -514,12 +528,13 @@
       z.style.width = w + '%';
       z.innerHTML = '<div class="zone-pct">0%</div>' +
                     '<div class="zone-track"><div class="zone-fill"></div></div>' +
+                    '<div class="zone-runner">🏃</div>' +
                     '<div class="zone-chip">' + (i + 1) + '번</div>' +
                     '<div class="zone-out">탈락<br>' + (i + 1) + '번</div>';
       zonesLayer.appendChild(z);
       players.push({
-        index: i, out: false, touched: false, progress: 0, el: z,
-        fillEl: z.querySelector('.zone-fill'), pctEl: z.querySelector('.zone-pct')
+        index: i, out: false, touched: false, progress: 0, moving: false, moveStopTimer: null, el: z,
+        fillEl: z.querySelector('.zone-fill'), pctEl: z.querySelector('.zone-pct'), runnerEl: z.querySelector('.zone-runner')
       });
     }
     aliveNum.textContent = playerCount;
@@ -532,10 +547,25 @@
     aliveNum.textContent = players.filter(p => !p.out).length;
   }
 
+  function setMoving(p, isMoving){
+    if (isMoving){
+      if (p.moveStopTimer){ clearTimeout(p.moveStopTimer); p.moveStopTimer = null; }
+      if (!p.moving){ p.moving = true; if (p.runnerEl) p.runnerEl.classList.add('active'); }
+    } else if (p.moving && !p.moveStopTimer){
+      p.moveStopTimer = setTimeout(() => {
+        p.moving = false;
+        p.moveStopTimer = null;
+        if (p.runnerEl) p.runnerEl.classList.remove('active');
+      }, 220);
+    }
+  }
+
   function eliminatePlayer(p){
     if (p.out) return;
     p.out = true;
     p.el.classList.add('out');
+    if (p.moveStopTimer){ clearTimeout(p.moveStopTimer); p.moveStopTimer = null; }
+    p.moving = false;
     updateSurvivorsHud();
     beep(140, 0.3, 'square');
     const remaining = players.filter(pl => !pl.out).length;
@@ -549,6 +579,7 @@
   function updateProgressBar(p){
     if (p.fillEl) p.fillEl.style.height = p.progress + '%';
     if (p.pctEl) p.pctEl.textContent = Math.round(p.progress) + '%';
+    if (p.runnerEl) p.runnerEl.style.bottom = 'calc(21% + ' + (p.progress * 0.4).toFixed(2) + '%)';
   }
 
   function addProgress(p, intensity){
@@ -593,6 +624,7 @@
         if (motionActive){
           if (intensity > threshold) eliminatePlayer(p);
         } else if (progressActive){
+          setMoving(p, intensity > PROGRESS_FLOOR);
           addProgress(p, intensity);
           if (gameState !== 'go') break;
         }
