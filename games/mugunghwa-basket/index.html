@@ -813,6 +813,9 @@
   var lastMotionAt = 0;
   var MOTION_GAIN_X = 1.9;
   var MOTION_GAIN_Y = 1.6;
+  function basketFollowRate(){
+    return controlMode === 'motion' ? 9 : 22;
+  }
   function clamp01(v){ return Math.max(0, Math.min(1, v)); }
 
   function initCamera(){
@@ -929,7 +932,7 @@
   });
   window.addEventListener('keyup', function(e){ keyState[e.key] = false; });
   function applyKeyboard(dt){
-    var speed = 420*dt;
+    var speed = 620*dt;
     if (keyState['ArrowLeft']||keyState['a']) basket.tx -= speed;
     if (keyState['ArrowRight']||keyState['d']) basket.tx += speed;
     if (keyState['ArrowUp']||keyState['w']) basket.ty -= speed;
@@ -967,8 +970,9 @@
 
     if (state === STATE.PLAYING){
       applyKeyboard(dt);
-      basket.x += (basket.tx - basket.x)*Math.min(1, dt*8);
-      basket.y += (basket.ty - basket.y)*Math.min(1, dt*8);
+      var followRate = basketFollowRate();
+      basket.x += (basket.tx - basket.x)*Math.min(1, dt*followRate);
+      basket.y += (basket.ty - basket.y)*Math.min(1, dt*followRate);
 
       spawnTimer += dt*1000;
       if (spawnTimer >= spawnInterval){
@@ -1000,8 +1004,9 @@
         }
       }
     } else {
-      basket.x += (basket.tx - basket.x)*Math.min(1, dt*8);
-      basket.y += (basket.ty - basket.y)*Math.min(1, dt*8);
+      var idleFollowRate = basketFollowRate();
+      basket.x += (basket.tx - basket.x)*Math.min(1, dt*idleFollowRate);
+      basket.y += (basket.ty - basket.y)*Math.min(1, dt*idleFollowRate);
     }
 
     render();
