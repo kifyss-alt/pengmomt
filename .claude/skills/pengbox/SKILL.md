@@ -1,14 +1,21 @@
 ---
 name: pengbox
-description: 펭맘 포트폴리오 사이트(https://pengbox-kifyss-alts-projects.vercel.app/)의 "펭맘의 작업실" 탭에 새로 만든 바이브코딩 작업물(웹앱, 미니게임, 자동화 도구 등)을 추가하고 배포한다. "작업물 추가해줘", "이거 pengbox에 올려줘", "게임 추가해줘" 같은 요청이나 /pengbox 호출 시 사용한다.
+description: 펭맘 포트폴리오 사이트("펭맘의 작업실" 탭)에 새로 만든 바이브코딩 작업물(웹앱, 미니게임, 자동화 도구 등)을 추가하고, Vercel(https://pengbox-kifyss-alts-projects.vercel.app/)과 GitHub Pages(https://kifyss-alt.github.io/pengmomt/)에 동시 배포한다. 자료창고(https://jaryo-changgo.vercel.app/) 등록용 텍스트도 함께 안내한다. "작업물 추가해줘", "이거 pengbox에 올려줘", "게임 추가해줘" 같은 요청이나 /pengbox 호출 시 사용한다.
 ---
 
 # pengbox — 작업물 추가 스킬
 
-이 저장소(`pengmomt`)는 펭맘 선생님의 포트폴리오 SPA다. `main` 브랜치가 Vercel과 연동되어 있어
-push하면 자동으로 https://pengbox-kifyss-alts-projects.vercel.app/ 에 배포된다.
+이 저장소(`pengmomt`)는 펭맘 선생님의 포트폴리오 SPA다. `main` 브랜치가 **두 곳**에 동시에
+연동되어 있어, push 한 번으로 둘 다 자동 배포된다:
+
+- Vercel 프로덕션: https://pengbox-kifyss-alts-projects.vercel.app/
+- GitHub Pages: https://kifyss-alt.github.io/pengmomt/ (저장소 Settings → Pages에서
+  `main` 브랜치를 소스로 쓰는 것을 전제로 함. 배포는 Vercel보다 다소 느릴 수 있음 — 보통 수 분,
+  길면 최대 10분)
+
 새 작업물은 "펭맘의 작업실" 탭(`index.html`의 `#vibe-projects`) 카드 그리드에 표시되며,
-데이터는 `vibe-portal.js`의 `vibeProjectsData` 배열 하나로 관리된다.
+데이터는 `vibe-portal.js`의 `vibeProjectsData` 배열 하나로 관리된다. (자료창고는 이 저장소와
+무관한 별개 앱이라 별도 취급 — 6단계 참고)
 
 **이 스킬은 사용자(저장소 소유자)가 직접 실행을 요청한 경우, main에 바로 커밋·push까지 자동으로
 끝내는 것을 목표로 한다.** 새 작업물을 만들고 나서 `/pengbox`라고만 부르면, 별도의 확인 없이
@@ -88,12 +95,12 @@ push하면 자동으로 https://pengbox-kifyss-alts-projects.vercel.app/ 에 배
 - 가능하면 `node server.js`로 로컬 서버(`http://localhost:8080`)를 띄워 "펭맘의 작업실" 탭에서
   새 카드와 상세 모달, (있다면) 미리보기 링크가 정상 동작하는지 확인한다
 
-## 5. 커밋 & 배포 (자동)
+## 5. 커밋 & 배포 (자동, 두 사이트 동시)
 
 - 기존 커밋 메시지 스타일(간결한 한국어 요약, 예: "우리나라 지도 퍼즐 웹앱 추가")을 따라 `main`에 바로 커밋한다
-- 확인 질문 없이 `git push origin main`까지 실행한다 — push되는 즉시 Vercel이 자동 빌드/배포하며
-  보통 1~2분 내 https://pengbox-kifyss-alts-projects.vercel.app/ 에 반영된다
-- 작업이 끝나면 무엇을 추가했는지, 배포까지 몇 분 정도 걸리는지 짧게 안내한다
+- 확인 질문 없이 `git push origin main`까지 실행한다 — push 한 번으로 **Vercel과 GitHub Pages
+  둘 다** 자동 빌드/배포된다. Vercel은 보통 1~2분, GitHub Pages는 조금 더 걸릴 수 있다(수 분~최대 10분)
+- 작업이 끝나면 무엇을 추가했는지, 두 사이트 주소와 배포까지 대략 얼마나 걸리는지 짧게 안내한다
 - 단, push가 실패하거나(원격에 새 커밋이 생겨 충돌 등) 검증(4단계) 중 명백한 오류를 발견하면
   멈추고 사용자에게 상황을 알린다 — 억지로 강제 push하지 않는다
 
