@@ -387,8 +387,10 @@
   playersMinus.addEventListener('click', () => { playerCount = Math.max(1, playerCount - 1); playersVal.textContent = playerCount; });
   playersPlus.addEventListener('click', () => { playerCount = Math.min(8, playerCount + 1); playersVal.textContent = playerCount; });
 
+  const FREEZE_STREAK_REQUIRED = 2; // require motion on 2 consecutive samples (~220ms) before eliminating, so a single noisy frame can't do it
+
   function applySensitivity(s){
-    threshold = 24 - (s * 1.7);
+    threshold = 44 - (s * 2.3); // was way too twitchy at low intensities; now needs clearer movement
     progressRate = 0.025 + s * 0.007; // higher sensitivity = faster progress gauge fill
   }
   sensSlider.addEventListener('input', () => {
@@ -533,7 +535,7 @@
                     '<div class="zone-out">탈락<br>' + (i + 1) + '번</div>';
       zonesLayer.appendChild(z);
       players.push({
-        index: i, out: false, touched: false, progress: 0, moving: false, moveStopTimer: null, el: z,
+        index: i, out: false, touched: false, progress: 0, moving: false, moveStopTimer: null, freezeStreak: 0, el: z,
         fillEl: z.querySelector('.zone-fill'), pctEl: z.querySelector('.zone-pct'), runnerEl: z.querySelector('.zone-runner')
       });
     }
@@ -622,7 +624,12 @@
         if (!count) continue;
         const intensity = diffSum / count;
         if (motionActive){
-          if (intensity > threshold) eliminatePlayer(p);
+          if (intensity > threshold){
+            p.freezeStreak++;
+            if (p.freezeStreak >= FREEZE_STREAK_REQUIRED) eliminatePlayer(p);
+          } else {
+            p.freezeStreak = 0;
+          }
         } else if (progressActive){
           setMoving(p, intensity > PROGRESS_FLOOR);
           addProgress(p, intensity);
@@ -686,6 +693,7 @@
     popText(CHANT);
 
     progressActive = true;
+    prevFrame = null; // don't compare against a frame from the freeze phase that just ended
     startTune(Math.max(230, 420 - round * 8));
     const rate = Math.min(1.55, 0.85 + round * 0.03 + Math.random() * 0.2);
     await speakChant(rate);
@@ -698,6 +706,8 @@
     taggerLabel.textContent = '지켜보는 중';
     setVisualState('freeze');
     beep(220, 0.25, 'sawtooth');
+    prevFrame = null; // don't compare against a frame from the go phase that just ended (kids were still moving)
+    for (const p of players){ p.freezeStreak = 0; }
     motionActive = true;
 
     const freeze = Math.max(1.05, 2.5 - round * 0.09);
