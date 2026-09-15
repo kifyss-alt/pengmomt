@@ -73,12 +73,33 @@
   .zone{ position:absolute; top:0; bottom:0; border-right:2px dashed rgba(247,240,227,.16); }
   .zone:last-child{ border-right:none; }
   .zone-chip{
-    position:absolute; bottom:9%; left:50%; transform:translateX(-50%);
-    background:rgba(20,17,28,.68); border:1.5px solid rgba(247,240,227,.2);
-    padding:.3rem .8rem; border-radius:999px;
-    font-family:'Noto Sans KR', sans-serif; font-weight:800;
-    font-size:clamp(.85rem,1.5vw,1.15rem); white-space:nowrap;
+    position:absolute; bottom:7%; left:50%; transform:translateX(-50%);
+    background:rgba(15,12,24,.78); border:2.5px solid var(--gold);
+    padding:.45rem 1.15rem; border-radius:999px;
+    font-family:'Black Han Sans', sans-serif; color:var(--gold);
+    font-size:clamp(1.3rem,3.2vw,2.1rem); white-space:nowrap;
+    box-shadow:0 4px 16px rgba(0,0,0,.5);
   }
+  /* ---- standing-spot guide: a simple stick figure marking where to stand ---- */
+  .zone-figure{
+    position:absolute; left:50%; top:8%; bottom:20%; width:min(60%, 140px);
+    transform:translateX(-50%); z-index:1; pointer-events:none;
+    transition:opacity .3s ease;
+  }
+  .zone-figure svg{ width:100%; height:100%; display:block; }
+  .zone-figure .fig-line{
+    fill:none; stroke:rgba(247,240,227,.6); stroke-width:5; stroke-linecap:round; stroke-linejoin:round;
+    stroke-dasharray:14 10; transition:stroke .3s ease, opacity .3s ease, stroke-dasharray .3s ease;
+  }
+  .zone-figure .fig-head{
+    fill:none; stroke:rgba(247,240,227,.6); stroke-width:5;
+    transition:stroke .3s ease, opacity .3s ease;
+  }
+  .zone-figure.occupied .fig-line, .zone-figure.occupied .fig-head{
+    stroke:var(--gold); stroke-dasharray:none;
+    filter:drop-shadow(0 0 6px rgba(227,167,47,.65));
+  }
+  .zone.out .zone-figure{ display:none; }
   .zone-out{
     position:absolute; inset:0; display:none; align-items:center; justify-content:center;
     flex-direction:column; gap:.2rem; text-align:center;
@@ -380,6 +401,8 @@
   let freezeTimer = null, resolveFreezeFn = null, motionLoopId = null, tuneTimer = null, tuneStep = 0;
   let prevFrame = null, muted = false, audioCtx = null, currentTuneMs = 340;
   let threshold = 14, progressRate = 0.05;
+  let baselinesCaptured = false, baselineCaptureAt = 0;
+  const OCCUPANCY_THRESHOLD = 12; // how far a zone's brightness must drift from its "empty" baseline to count as someone standing there
 
   const savedBest = localStorage.getItem(BEST_KEY);
   bestNum.textContent = savedBest || '-';
@@ -528,7 +551,13 @@
       z.className = 'zone';
       z.style.left = (i * w) + '%';
       z.style.width = w + '%';
-      z.innerHTML = '<div class="zone-pct">0%</div>' +
+      z.innerHTML = '<div class="zone-figure"><svg viewBox="0 0 60 140">' +
+                      '<circle class="fig-head" cx="30" cy="18" r="14"/>' +
+                      '<path class="fig-line" d="M30 32 L30 85"/>' +
+                      '<path class="fig-line" d="M8 60 L30 46 L52 60"/>' +
+                      '<path class="fig-line" d="M10 132 L30 85 L50 132"/>' +
+                    '</svg></div>' +
+                    '<div class="zone-pct">0%</div>' +
                     '<div class="zone-track"><div class="zone-fill"></div></div>' +
                     '<div class="zone-runner">🏃</div>' +
                     '<div class="zone-chip">' + (i + 1) + '번</div>' +
@@ -536,13 +565,16 @@
       zonesLayer.appendChild(z);
       players.push({
         index: i, out: false, touched: false, progress: 0, moving: false, moveStopTimer: null, freezeStreak: 0, el: z,
-        fillEl: z.querySelector('.zone-fill'), pctEl: z.querySelector('.zone-pct'), runnerEl: z.querySelector('.zone-runner')
+        fillEl: z.querySelector('.zone-fill'), pctEl: z.querySelector('.zone-pct'), runnerEl: z.querySelector('.zone-runner'),
+        figureEl: z.querySelector('.zone-figure'), baselineLum: null, occupied: false, occupiedStopTimer: null
       });
     }
     aliveNum.textContent = playerCount;
     totalNum.textContent = playerCount;
     analysisCanvas.width = Math.max(64, playerCount * 16);
     prevFrame = null;
+    baselinesCaptured = false;
+    baselineCaptureAt = Date.now() + 700;
   }
 
   function updateSurvivorsHud(){
@@ -562,12 +594,62 @@
     }
   }
 
+  function setOccupied(p, isOccupied){
+    if (isOccupied){
+      if (p.occupiedStopTimer){ clearTimeout(p.occupiedStopTimer); p.occupiedStopTimer = null; }
+      if (!p.occupied){ p.occupied = true; if (p.figureEl) p.figureEl.classList.add('occupied'); }
+    } else if (p.occupied && !p.occupiedStopTimer){
+      p.occupiedStopTimer = setTimeout(() => {
+        p.occupied = false;
+        p.occupiedStopTimer = null;
+        if (p.figureEl) p.figureEl.classList.remove('occupied');
+      }, 400);
+    }
+  }
+
+  function zoneAvgLum(frame, w, xStart, xEnd){
+    let sum = 0, count = 0;
+    for (let y = 0; y < ANALYSIS_H; y++){
+      const rowBase = y * w;
+      for (let x = xStart; x < xEnd; x++){
+        const idx = (rowBase + x) * 4;
+        sum += frame[idx]*0.3 + frame[idx+1]*0.59 + frame[idx+2]*0.11;
+        count++;
+      }
+    }
+    return count ? sum / count : 0;
+  }
+
+  function captureBaselines(frame, w){
+    const zoneWidthPx = w / playerCount;
+    for (const p of players){
+      const xStart = Math.floor(p.index * zoneWidthPx);
+      const xEnd = Math.floor((p.index + 1) * zoneWidthPx);
+      p.baselineLum = zoneAvgLum(frame, w, xStart, xEnd);
+    }
+    baselinesCaptured = true;
+  }
+
+  function updateOccupancy(frame, w){
+    if (!baselinesCaptured) return;
+    const zoneWidthPx = w / playerCount;
+    for (const p of players){
+      if (p.out || p.baselineLum === null) continue;
+      const xStart = Math.floor(p.index * zoneWidthPx);
+      const xEnd = Math.floor((p.index + 1) * zoneWidthPx);
+      const lum = zoneAvgLum(frame, w, xStart, xEnd);
+      setOccupied(p, Math.abs(lum - p.baselineLum) > OCCUPANCY_THRESHOLD);
+    }
+  }
+
   function eliminatePlayer(p){
     if (p.out) return;
     p.out = true;
     p.el.classList.add('out');
     if (p.moveStopTimer){ clearTimeout(p.moveStopTimer); p.moveStopTimer = null; }
+    if (p.occupiedStopTimer){ clearTimeout(p.occupiedStopTimer); p.occupiedStopTimer = null; }
     p.moving = false;
+    p.occupied = false;
     updateSurvivorsHud();
     beep(140, 0.3, 'square');
     const remaining = players.filter(pl => !pl.out).length;
@@ -604,6 +686,12 @@
     actx.drawImage(video, 0, 0, w, ANALYSIS_H);
     actx.restore();
     const frame = actx.getImageData(0, 0, w, ANALYSIS_H).data;
+
+    if (!baselinesCaptured && Date.now() >= baselineCaptureAt){
+      captureBaselines(frame, w);
+    }
+    updateOccupancy(frame, w);
+
     if (prevFrame && prevFrame.length === frame.length && (motionActive || progressActive)){
       const zoneWidthPx = w / playerCount;
       for (const p of players){
@@ -668,6 +756,8 @@
     chantText.textContent = '자리를 정해주세요';
     subText.textContent = playerCount + '명이 각자 번호 자리에 서면 준비 완료!';
     prepBar.hidden = false;
+    clearTimeout(motionLoopId); // avoid stacking a second loop if we're re-entering prep
+    motionLoop();
   }
 
   prepStartBtn.addEventListener('click', () => {
@@ -681,8 +771,7 @@
     motionActive = false;
     endOverlay.hidden = true;
     buildZones();
-    motionLoop();
-    runRound();
+    runRound(); // motionLoop is already running (started in enterPrep)
   }
 
   async function runRound(){
