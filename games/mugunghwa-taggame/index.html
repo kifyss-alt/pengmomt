@@ -100,7 +100,7 @@
   .zone-fill{
     width:100%; height:0%;
     background:linear-gradient(to top, var(--hibiscus), var(--gold));
-    transition:height .25s ease;
+    transition:height .12s cubic-bezier(.2,.8,.2,1);
   }
   .zone-pct{
     position:absolute; left:50%; bottom:calc(21% + 40% + 8px); transform:translateX(-50%);
@@ -391,7 +391,7 @@
 
   function applySensitivity(s){
     threshold = 44 - (s * 2.3); // was way too twitchy at low intensities; now needs clearer movement
-    progressRate = 0.025 + s * 0.007; // higher sensitivity = faster progress gauge fill
+    progressRate = 0.08 + s * 0.022; // higher sensitivity = faster progress gauge fill (bumped up so it visibly surges per motion burst)
   }
   sensSlider.addEventListener('input', () => {
     sensVal.textContent = sensSlider.value;
