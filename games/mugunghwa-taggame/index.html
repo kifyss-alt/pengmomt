@@ -236,6 +236,27 @@
   .stepper-btn:hover{ background:var(--hibiscus-deep); }
   #playersVal{ font-family:'Noto Sans KR', sans-serif; font-weight:800; font-size:1.3rem; min-width:1.6em; text-align:center; color:var(--gold); }
 
+  .name-picker-wrap{ display:flex; flex-direction:column; align-items:center; gap:.5rem; width:100%; }
+  .name-picker-label{ font-family:'Gaegu', sans-serif; color:var(--ink-text-dim); font-size:1.02rem; }
+  .name-picker-label #nameCount{ color:var(--gold); font-weight:700; }
+  .name-picker{
+    display:flex; flex-wrap:wrap; gap:.5rem; justify-content:center;
+    max-width:min(90vw, 560px);
+  }
+  .name-chip{
+    font-family:'Noto Sans KR', sans-serif; font-weight:700; font-size:.95rem;
+    background:rgba(255,255,255,.06); color:var(--ink-text-dim);
+    border:2px solid rgba(247,240,227,.22); border-radius:999px;
+    padding:.4rem 1rem; cursor:pointer; transition:all .15s ease;
+  }
+  .name-chip:hover{ border-color:rgba(247,240,227,.5); }
+  .name-chip.selected{
+    background:var(--gold); color:var(--ink); border-color:var(--gold);
+    box-shadow:0 3px 10px rgba(227,167,47,.4);
+  }
+  .name-chip.selected .chip-num{ opacity:.75; margin-right:.3em; }
+  .name-chip[disabled]{ opacity:.35; cursor:not-allowed; }
+
   button.cta{
     font-family:'Gaegu', sans-serif; font-weight:700; font-size:clamp(1.1rem, 1.9vw, 1.35rem);
     color:var(--ink); background:var(--gold); border:none; border-radius:999px; padding:.8rem 2.3rem;
@@ -246,6 +267,8 @@
   button.cta:active{ transform:translateY(5px); box-shadow:0 1px 0 var(--hibiscus-deep); }
   button.cta.secondary{ background:transparent; color:var(--ink-text); box-shadow:none; border:2px solid rgba(247,240,227,.35); }
   button.cta.secondary:hover{ transform:none; background:rgba(247,240,227,.08); }
+  button.cta[disabled]{ opacity:.4; cursor:not-allowed; box-shadow:none; }
+  button.cta[disabled]:hover{ transform:none; }
 
   .end-emote{ font-family:'Black Han Sans', sans-serif; font-size:clamp(2.2rem,6.6vw,3.8rem); color:var(--ember); }
   .end-emote.success{ color:var(--gold); }
@@ -336,7 +359,7 @@
   </div>
 
   <div class="prep-bar" id="prepBar" hidden>
-    <div class="prep-text" id="prepText">각자 정해진 번호 자리에 서주세요!</div>
+    <div class="prep-text" id="prepText">각자 정해진 이름표 자리에 서주세요!</div>
     <button class="cta" id="prepStartBtn">게임 시작!</button>
   </div>
 
@@ -346,24 +369,22 @@
       <svg class="flower" viewBox="0 0 64 64"><g fill="none"><path d="M32 32 C32 32 24 12 32 4 C40 12 32 32 32 32 Z" fill="#e0568c"/><path d="M32 32 C32 32 52 24 60 32 C52 40 32 32 32 32 Z" fill="#e0568c"/><path d="M32 32 C32 32 40 52 32 60 C24 52 32 32 32 32 Z" fill="#e0568c"/><path d="M32 32 C32 32 12 40 4 32 C12 24 32 32 32 32 Z" fill="#e0568c"/><path d="M32 32 C32 32 46 18 46 18 C46 18 46 32 32 32 Z" fill="#d1477c" opacity=".7"/><circle cx="32" cy="32" r="6" fill="#b83568"/></g></svg>
       <h1 class="title-main">무궁화 꽃이<br><span class="accent">피었습니다</span></h1>
       <div class="rules">
-        <b>1.</b> 인원을 정하고 ‘시작하기’를 누른 뒤 카메라·소리 권한을 <b>허용</b>해주세요.<br>
-        <b>2.</b> 화면에 나오는 번호 자리에 한 명씩 서주세요. <b>걸어 나가지 말고 그 자리</b>에서 게임해요.<br>
+        <b>1.</b> 참여할 친구 이름을 고르고 ‘시작하기’를 누른 뒤 카메라·소리 권한을 <b>허용</b>해주세요.<br>
+        <b>2.</b> 화면에 나오는 자기 이름 자리에 한 명씩 서주세요. <b>걸어 나가지 말고 그 자리</b>에서 게임해요.<br>
         <b>3.</b> 술래가 노래를 외는 동안, <b>제자리에서 힘차게</b> 움직이면(팔 흔들기, 점프 등) 술래에게 점점 가까워져요.<br>
         <b>4.</b> 막대 게이지가 가득 차면 <b>술래를 터치해서 성공!</b><br>
         <b>5.</b> 술래가 뒤돌아 <b>“얼음!”</b>이라고 할 때 움직이면, <b>그 사람만</b> 그 자리에서 탈락해요.
       </div>
-      <div class="setup-row">
-        인원
-        <button class="stepper-btn" id="playersMinus" type="button" aria-label="인원 줄이기">−</button>
-        <span id="playersVal">4</span>
-        <button class="stepper-btn" id="playersPlus" type="button" aria-label="인원 늘리기">+</button>
+      <div class="name-picker-wrap">
+        <div class="name-picker-label">참여할 친구를 선택하세요 (최대 8명) — <span id="nameCount">0</span>명 선택됨</div>
+        <div class="name-picker" id="namePicker"></div>
       </div>
       <div class="setup-row">
         민감도
         <input type="range" id="sensSlider" min="1" max="10" value="5">
         <span id="sensVal">5</span>
       </div>
-      <button class="cta" id="startBtn">시작하기</button>
+      <button class="cta" id="startBtn" disabled>시작하기</button>
       <div class="note" id="startNote">※ 전자칠판이나 PC의 웹캠·스피커를 사용해요. 모든 인원이 카메라에 보이도록 서고, <b>제자리에서</b> 움직이며 전진해요 (걸어 나가지 않아도 돼요!).</div>
     </div>
   </div>
@@ -405,9 +426,8 @@
   const sensSlider = document.getElementById('sensSlider');
   const sensVal = document.getElementById('sensVal');
   const muteBtn = document.getElementById('muteBtn');
-  const playersMinus = document.getElementById('playersMinus');
-  const playersPlus = document.getElementById('playersPlus');
-  const playersVal = document.getElementById('playersVal');
+  const namePicker = document.getElementById('namePicker');
+  const nameCount = document.getElementById('nameCount');
   const prepBar = document.getElementById('prepBar');
   const prepStartBtn = document.getElementById('prepStartBtn');
 
@@ -415,9 +435,12 @@
   const BEST_KEY = 'mugunghwa-best-touch-round';
   const TARGET_ROUNDS = 10;
   const PROGRESS_FLOOR = 3; // ignore small camera noise/jitter
+  const MAX_PLAYERS = 8;
+  const CLASS_ROSTER = ['강우주','권소담','김예린','남소윤','송시우','송예온','오윤정','이서환','이지호','이혜연','임이든','장우진','전도준','전소영','지한겸','정아윤','하소율','장다미'];
   const MELODY = [329.63, 392.00, 440.00, 392.00, 493.88, 440.00, 392.00, 329.63]; // E-pentatonic playground riff
 
-  let playerCount = 4;
+  let playerCount = 0;
+  let selectedNames = [];
   let players = [];
   let round = 0, gameState = 'idle', motionActive = false, progressActive = false;
   let freezeTimer = null, resolveFreezeFn = null, motionLoopId = null, tuneTimer = null, tuneStep = 0;
@@ -429,8 +452,34 @@
   const savedBest = localStorage.getItem(BEST_KEY);
   bestNum.textContent = savedBest || '-';
 
-  playersMinus.addEventListener('click', () => { playerCount = Math.max(1, playerCount - 1); playersVal.textContent = playerCount; });
-  playersPlus.addEventListener('click', () => { playerCount = Math.min(8, playerCount + 1); playersVal.textContent = playerCount; });
+  function refreshNamePicker(){
+    nameCount.textContent = selectedNames.length;
+    startBtn.disabled = selectedNames.length === 0;
+    const chips = namePicker.querySelectorAll('.name-chip');
+    chips.forEach(chip => {
+      const isSelected = selectedNames.includes(chip.dataset.name);
+      chip.classList.toggle('selected', isSelected);
+      chip.disabled = !isSelected && selectedNames.length >= MAX_PLAYERS;
+      chip.querySelector('.chip-num').textContent = isSelected ? (selectedNames.indexOf(chip.dataset.name) + 1) + '. ' : '';
+    });
+  }
+
+  CLASS_ROSTER.forEach(name => {
+    const chip = document.createElement('button');
+    chip.type = 'button';
+    chip.className = 'name-chip';
+    chip.dataset.name = name;
+    chip.innerHTML = '<span class="chip-num"></span>' + name;
+    chip.addEventListener('click', () => {
+      const idx = selectedNames.indexOf(name);
+      if (idx >= 0) selectedNames.splice(idx, 1);
+      else if (selectedNames.length < MAX_PLAYERS) selectedNames.push(name);
+      playerCount = selectedNames.length;
+      refreshNamePicker();
+    });
+    namePicker.appendChild(chip);
+  });
+  refreshNamePicker();
 
   const FREEZE_STREAK_REQUIRED = 2; // require motion on 2 consecutive samples (~220ms) before eliminating, so a single noisy frame can't do it
 
@@ -569,6 +618,7 @@
     players = [];
     const w = 100 / playerCount;
     for (let i = 0; i < playerCount; i++){
+      const name = selectedNames[i] || ((i + 1) + '번');
       const z = document.createElement('div');
       z.className = 'zone';
       z.style.left = (i * w) + '%';
@@ -582,11 +632,11 @@
                     '<div class="zone-pct">0%</div>' +
                     '<div class="zone-track"><div class="zone-fill"></div></div>' +
                     '<div class="zone-runner">🏃</div>' +
-                    '<div class="zone-chip">' + (i + 1) + '번</div>' +
-                    '<div class="zone-out">탈락<br>' + (i + 1) + '번</div>';
+                    '<div class="zone-chip">' + name + '</div>' +
+                    '<div class="zone-out">탈락<br>' + name + '</div>';
       zonesLayer.appendChild(z);
       players.push({
-        index: i, out: false, touched: false, progress: 0, moving: false, moveStopTimer: null, freezeStreak: 0, el: z,
+        index: i, name: name, out: false, touched: false, progress: 0, moving: false, moveStopTimer: null, freezeStreak: 0, el: z,
         fillEl: z.querySelector('.zone-fill'), pctEl: z.querySelector('.zone-pct'), runnerEl: z.querySelector('.zone-runner'),
         figureEl: z.querySelector('.zone-figure'), baselineLum: null, occupied: false, occupiedStopTimer: null
       });
@@ -776,7 +826,7 @@
     setVisualState('prep');
     buildZones();
     chantText.textContent = '자리를 정해주세요';
-    subText.textContent = playerCount + '명이 각자 번호 자리에 서면 준비 완료!';
+    subText.textContent = playerCount + '명이 각자 이름표 자리에 서면 준비 완료!';
     prepBar.hidden = false;
     clearTimeout(motionLoopId); // avoid stacking a second loop if we're re-entering prep
     motionLoop();
@@ -868,7 +918,7 @@
 
     beep(880, 0.16, 'sine');
     setTimeout(() => beep(1175, 0.3, 'sine'), 140);
-    showWinFlash((p.index + 1) + '번 성공!');
+    showWinFlash(p.name + ' 성공!');
     setTimeout(() => showEndOverlay('touch', p), 1500);
   }
 
@@ -881,8 +931,8 @@
   function showEndOverlay(kind, touchedPlayer){
     endEmote.classList.toggle('success', kind === 'touch');
     if (kind === 'touch'){
-      endEmote.textContent = (touchedPlayer.index + 1) + '번 성공!';
-      endResult.innerHTML = (touchedPlayer.index + 1) + '번 친구가 <span class="num">' + round +
+      endEmote.textContent = touchedPlayer.name + ' 성공!';
+      endResult.innerHTML = touchedPlayer.name + ' 친구가 <span class="num">' + round +
         '</span>라운드만에 술래를 터치했어요! 우리 팀 승리 🎉';
     } else if (kind === 'timeout'){
       endEmote.textContent = '아쉬워요!';
