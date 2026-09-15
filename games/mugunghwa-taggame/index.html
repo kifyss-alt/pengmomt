@@ -295,6 +295,19 @@
     6%{ background-color:rgba(255,255,255,.55); }
     18%{ background-color:rgba(255,255,255,0); }
   }
+  .rainbow-arc{
+    position:absolute; z-index:0; bottom:6%; left:50%;
+    width:min(92vw, 760px); height:auto;
+    transform:translateX(-50%) scale(.7) translateY(20px); opacity:0;
+    filter:drop-shadow(0 0 22px rgba(255,255,255,.35));
+  }
+  .win-flash.show .rainbow-arc{ animation:rainbow-in .7s cubic-bezier(.2,.8,.25,1.15) .05s forwards; }
+  @keyframes rainbow-in{
+    0%{ transform:translateX(-50%) scale(.7) translateY(20px); opacity:0; }
+    70%{ transform:translateX(-50%) scale(1.04) translateY(0); opacity:1; }
+    100%{ transform:translateX(-50%) scale(1) translateY(0); opacity:1; }
+  }
+
   .flash-card{
     position:relative; z-index:2; display:flex; flex-direction:column; align-items:center; gap:.6rem;
     transform:scale(.4); opacity:0;
@@ -333,9 +346,28 @@
     100%{ transform:translate(calc(-50% + var(--tx)), calc(-50% + var(--ty))) scale(1) rotate(var(--rot)); opacity:0; }
   }
 
+  /* ---- firework bursts at random points across the screen ---- */
+  .firework-layer{ position:absolute; inset:0; z-index:1; overflow:hidden; }
+  .firework-burst{ position:absolute; width:0; height:0; }
+  .firework-spark{
+    position:absolute; left:0; top:0; width:8px; height:8px; margin:-4px 0 0 -4px;
+    border-radius:50%; opacity:0; box-shadow:0 0 8px 2px currentColor;
+  }
+  .win-flash.show .firework-spark{
+    animation:firework-pop .85s ease-out forwards;
+    animation-delay:var(--delay, 0s);
+  }
+  @keyframes firework-pop{
+    0%{ transform:translate(0,0) scale(.5); opacity:0; }
+    8%{ opacity:1; transform:translate(0,0) scale(1.1); }
+    100%{ transform:translate(var(--sx), var(--sy)) scale(.3); opacity:0; }
+  }
+
   @media (prefers-reduced-motion: reduce){
     video, .taggerFig svg, .state-go .taggerFig, button.cta, .toast, .banner .chant.pop, .zone-runner, .win-flash, .win-flash *{ animation:none !important; transition:none !important; }
     .win-flash.show .flash-card{ opacity:1; transform:scale(1); }
+    .win-flash.show .rainbow-arc{ opacity:1; transform:translateX(-50%) scale(1) translateY(0); }
+    .win-flash .firework-spark, .win-flash .confetti-piece{ display:none; }
   }
   @media (max-width: 760px){
     .taggerbox{ right:1.5%; width:clamp(110px,24vw,190px); }
@@ -365,6 +397,16 @@
   <div class="toast" id="toast">성공!</div>
 
   <div class="win-flash" id="winFlash">
+    <svg class="rainbow-arc" viewBox="0 0 300 150" aria-hidden="true">
+      <path d="M10 150 A140 140 0 0 1 290 150" fill="none" stroke="#e02424" stroke-width="12"/>
+      <path d="M26 150 A124 124 0 0 1 274 150" fill="none" stroke="#f2711c" stroke-width="12"/>
+      <path d="M42 150 A108 108 0 0 1 258 150" fill="none" stroke="#fbbd08" stroke-width="12"/>
+      <path d="M58 150 A92 92 0 0 1 242 150" fill="none" stroke="#21ba45" stroke-width="12"/>
+      <path d="M74 150 A76 76 0 0 1 226 150" fill="none" stroke="#2185d0" stroke-width="12"/>
+      <path d="M90 150 A60 60 0 0 1 210 150" fill="none" stroke="#6435c9" stroke-width="12"/>
+      <path d="M106 150 A44 44 0 0 1 194 150" fill="none" stroke="#e94ba0" stroke-width="12"/>
+    </svg>
+    <div class="firework-layer" id="fireworkLayer"></div>
     <div class="confetti-layer" id="confettiLayer"></div>
     <div class="flash-card">
       <img class="flash-photo" id="winFlashPhoto" alt="">
@@ -463,6 +505,7 @@
   const winFlashText = document.getElementById('winFlashText');
   const winFlashPhoto = document.getElementById('winFlashPhoto');
   const confettiLayer = document.getElementById('confettiLayer');
+  const fireworkLayer = document.getElementById('fireworkLayer');
   const taggerLabel = document.getElementById('taggerLabel');
   const sensSlider = document.getElementById('sensSlider');
   const sensVal = document.getElementById('sensVal');
@@ -632,6 +675,63 @@
       out.getContext('2d').drawImage(full, sx, 0, zoneW, vh, 0, 0, out.width, out.height);
       return out.toDataURL('image/jpeg', 0.85);
     }catch(e){ return null; }
+  }
+
+  const FIREWORK_COLORS = ['#ff5757','#ffb020','#ffe45e','#4ade80','#38bdf8','#a78bfa','#f472b6'];
+  function fireworkPopSound(t, baseFreq){
+    try{
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(baseFreq, t);
+      osc.frequency.exponentialRampToValueAtTime(Math.max(60, baseFreq * 0.35), t + 0.12);
+      osc.connect(gain); gain.connect(audioCtx.destination);
+      gain.gain.setValueAtTime(0.0001, t);
+      gain.gain.exponentialRampToValueAtTime(0.16, t + 0.008);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.16);
+      osc.start(t); osc.stop(t + 0.18);
+    }catch(e){}
+  }
+
+  function spawnFireworks(){
+    fireworkLayer.innerHTML = '';
+    const frag = document.createDocumentFragment();
+    const bursts = 5;
+    const delays = [];
+    for (let f = 0; f < bursts; f++) delays.push(f * 0.22 + Math.random() * 0.12);
+
+    for (let f = 0; f < bursts; f++){
+      const cx = 12 + Math.random() * 76; // % across the screen
+      const cy = 10 + Math.random() * 50; // % down the screen
+      const color = FIREWORK_COLORS[Math.floor(Math.random() * FIREWORK_COLORS.length)];
+      const burst = document.createElement('div');
+      burst.className = 'firework-burst';
+      burst.style.left = cx + '%';
+      burst.style.top = cy + '%';
+      const sparkCount = 16;
+      for (let i = 0; i < sparkCount; i++){
+        const spark = document.createElement('span');
+        spark.className = 'firework-spark';
+        const angle = (i / sparkCount) * Math.PI * 2 + Math.random() * 0.25;
+        const dist = 55 + Math.random() * 55;
+        spark.style.setProperty('--sx', (Math.cos(angle) * dist).toFixed(0) + 'px');
+        spark.style.setProperty('--sy', (Math.sin(angle) * dist).toFixed(0) + 'px');
+        spark.style.setProperty('--delay', delays[f].toFixed(2) + 's');
+        spark.style.color = color;
+        spark.style.background = color;
+        burst.appendChild(spark);
+      }
+      frag.appendChild(burst);
+    }
+    fireworkLayer.appendChild(frag);
+
+    if (!muted){
+      try{
+        ensureAudio();
+        const t0 = audioCtx.currentTime;
+        delays.forEach(d => fireworkPopSound(t0 + d, 450 + Math.random() * 550));
+      }catch(e){}
+    }
   }
 
   const CONFETTI_EMOJI = ['🎉','✨','🎊','⭐','🌟','💛','🏵️'];
@@ -1021,10 +1121,11 @@
     winFlashText.textContent = text;
     winFlashPhoto.src = photoDataUrl || '';
     spawnConfetti();
+    spawnFireworks();
     winFlash.classList.remove('show');
     void winFlash.offsetWidth; // restart the animation even if triggered twice in a row
     winFlash.classList.add('show');
-    setTimeout(() => { winFlash.classList.remove('show'); winFlashPhoto.src = ''; }, 2200);
+    setTimeout(() => { winFlash.classList.remove('show'); winFlashPhoto.src = ''; }, 2600);
   }
 
   function handleTouchWin(p){
@@ -1037,7 +1138,7 @@
     const photo = captureSnapshot(p);
     playFanfare();
     showWinFlash(p.name + ' 성공!', photo);
-    setTimeout(() => showEndOverlay('touch', p), 2400);
+    setTimeout(() => showEndOverlay('touch', p), 2800);
   }
 
   function handleGameOver(kind){
