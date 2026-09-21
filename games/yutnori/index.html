@@ -43,6 +43,12 @@
   button{ font-family:inherit; cursor:pointer; border:none; }
   .app{ max-width:640px; margin:0 auto; padding:24px 16px 24px; min-height:100vh; }
 
+  .app-footer{
+    margin-top:20px; padding:10px 8px 4px; text-align:center;
+    font-family:'Do Hyeon',sans-serif; font-size:.72rem; line-height:1.6;
+    color:var(--ink-soft); opacity:.75;
+  }
+
   .screen{ display:none; flex-direction:column; gap:16px; animation:fadeUp .35s ease; }
   .screen.active{ display:flex; }
   @keyframes fadeUp{ from{opacity:0; transform:translateY(10px);} to{opacity:1; transform:translateY(0);} }
@@ -323,6 +329,11 @@
       <button class="big-btn" id="btnPlayAgain">다시 놀기 🔁</button>
     </div>
   </section>
+
+  <footer class="app-footer">
+    © 2026 김선옥(펭맘선생님) · 충남 홍성교육지원청 공립유치원 교사<br>
+    본 콘텐츠의 저작권은 원작자에게 있습니다.
+  </footer>
 
 </div>
 
