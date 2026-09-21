@@ -194,12 +194,21 @@
 
   .control-panel{ background:var(--card); border-radius:26px; padding:16px; box-shadow:var(--shadow); }
 
-  .sticks-row{ display:flex; justify-content:center; gap:8px; margin-bottom:14px; height:52px; align-items:center; }
+  .sticks-row{ display:flex; justify-content:center; gap:5vw; margin-bottom:16px; height:34vw; max-height:150px; align-items:center; }
   .stick{
-    width:14px; height:46px; border-radius:8px; background:#F4E3C1; border:2px solid #C9974C;
-    transition:transform .12s ease, background .12s ease;
+    position:relative;
+    width:9vw; max-width:38px; height:32vw; max-height:135px; border-radius:16px;
+    background:linear-gradient(180deg,#FBEED2,#F0DDB0); border:3px solid #C9974C;
+    box-shadow:0 4px 0 rgba(0,0,0,.08);
+    transition:transform .12s ease, background .25s ease, border-color .25s ease;
   }
-  .stick.flip{ background:#8B5E3C; border-color:#5D3A20; }
+  .stick::after{
+    content:''; position:absolute; left:50%; top:14%; bottom:14%; width:3px;
+    background:rgba(255,255,255,.55); transform:translateX(-50%); border-radius:2px;
+    transition:opacity .2s ease;
+  }
+  .stick.flip{ background:linear-gradient(180deg,#8B5E3C,#6E472A); border-color:#4A2E17; }
+  .stick.flip::after{ background:rgba(255,255,255,.85); width:5px; box-shadow:0 0 6px rgba(255,255,255,.5); }
 
   .throw-btn{ background:var(--pink-a); box-shadow:0 6px 0 var(--pink-a-deep); }
   .throw-btn:active{ box-shadow:0 1px 0 var(--pink-a-deep); }
@@ -768,14 +777,8 @@
     document.querySelectorAll('#controlPanel button').forEach(function(b){ b.disabled=!on; });
   }
 
-  function weightedThrow(){
-    var r = Math.random()*100;
-    if(r<35) return 'do';
-    if(r<65) return 'gae';
-    if(r<85) return 'geol';
-    if(r<93) return 'yut';
-    return 'mo';
-  }
+  // 뒤집어진(등이 보이는) 윷가락 개수 -> 결과. 실제 윷 세는 방식과 같다: 0개=모, 4개=윷.
+  var COUNT_TO_RESULT = {0:'mo', 1:'do', 2:'gae', 3:'geol', 4:'yut'};
 
   function onVirtualThrow(){
     ensureAudio();
@@ -788,13 +791,30 @@
       });
       playPop(300+Math.random()*200);
       ticks++;
-      if(ticks>=7){
+      if(ticks>=9){
         clearInterval(timer);
-        els.forEach(function(el){ el.style.transform='rotate(0deg)'; el.classList.remove('flip'); });
-        var result = weightedThrow();
-        handleResult(result);
+        var flips = [0,1,2,3].map(function(){ return Math.random()<0.55; });
+        els.forEach(function(el,i){
+          el.style.transform='rotate(0deg)';
+          el.classList.toggle('flip', flips[i]);
+        });
+        playPop(560);
+        var flipCount = flips.filter(Boolean).length;
+        revealVirtualResult(flipCount);
       }
-    }, 110);
+    }, 120);
+  }
+
+  async function revealVirtualResult(flipCount){
+    var key = COUNT_TO_RESULT[flipCount];
+    var info = RESULT_INFO[key];
+    showToast('🥢', flipCount+'개가 뒤집어졌어요!', 1500);
+    speak(flipCount+'개가 뒤집어졌어요!');
+    await delay(1500);
+    showToast(info.paws, '그래서... '+info.label+'!', 1400);
+    speak('그래서... '+info.label+'!');
+    await delay(1300);
+    handleResult(key);
   }
 
   function announceTurn(first){
@@ -818,9 +838,9 @@
     var info = RESULT_INFO[key];
     var player = game.players[game.currentIdx];
 
-    showToast(info.paws, info.label+'! '+info.steps+'칸 이동!', 1300);
+    showToast(info.paws, info.label+'! '+info.steps+'칸 이동!', 1500);
     speak(info.voice);
-    await delay(650);
+    await delay(900);
 
     var path = computePath(player.node, info.steps);
     for(var i=0;i<path.length;i++){
@@ -828,9 +848,9 @@
       var tokenEl = document.getElementById('token-'+player.slot);
       var pos = NODES[player.node];
       tokenEl.style.left = pos.x+'%'; tokenEl.style.top = pos.y+'%';
-      try{ tokenEl.animate([{transform:'translate(-50%,-50%) scale(1)'},{transform:'translate(-50%,-50%) scale(1.4)'},{transform:'translate(-50%,-50%) scale(1)'}],{duration:260,easing:'ease-out'}); }catch(e){}
+      try{ tokenEl.animate([{transform:'translate(-50%,-50%) scale(1)'},{transform:'translate(-50%,-50%) scale(1.4)'},{transform:'translate(-50%,-50%) scale(1)'}],{duration:280,easing:'ease-out'}); }catch(e){}
       playPop(440+i*40);
-      await delay(260);
+      await delay(420);
     }
 
     var reachedHome = player.node==='HOME';
