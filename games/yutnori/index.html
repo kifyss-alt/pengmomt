@@ -157,6 +157,19 @@
   .trophy-shelf{ display:flex; gap:6px; min-height:0; flex-wrap:wrap; }
   .trophy-shelf .tp{ font-size:1.4rem; background:#fff; border-radius:50%; width:34px; height:34px; display:flex; align-items:center; justify-content:center; box-shadow:0 2px 0 rgba(0,0,0,.08); }
 
+  .game-main{ display:flex; flex-direction:column; gap:10px; }
+  .side-panel{ display:flex; flex-direction:column; gap:10px; }
+
+  /* 태블릿 이상 가로 화면: 말판과 조작 영역을 2행이 아니라 2열로 나란히 배치 */
+  @media (min-width:760px){
+    .app.wide{ max-width:1000px; }
+    .game-main{
+      display:grid; grid-template-columns:minmax(320px,520px) 1fr;
+      align-items:start; gap:24px;
+    }
+    .side-panel{ justify-content:center; height:100%; gap:20px; }
+  }
+
   .board-wrap{ display:flex; justify-content:center; }
   .board{
     position:relative; width:100%; max-width:520px; aspect-ratio:1/1;
@@ -320,13 +333,17 @@
       <button class="icon-btn" id="btnSound" title="소리 끄고 켜기"><span class="snd-on">🔊</span><span class="snd-off">🔇</span></button>
     </div>
     <div class="trophy-shelf" id="trophyShelf"></div>
-    <div class="board-wrap">
-      <div class="board" id="board">
-        <svg class="board-lines" viewBox="0 0 100 100" id="boardLines"></svg>
+    <div class="game-main">
+      <div class="board-wrap">
+        <div class="board" id="board">
+          <svg class="board-lines" viewBox="0 0 100 100" id="boardLines"></svg>
+        </div>
+      </div>
+      <div class="side-panel">
+        <div class="turn-banner" id="turnBanner">준비 중...</div>
+        <div class="control-panel" id="controlPanel"></div>
       </div>
     </div>
-    <div class="turn-banner" id="turnBanner">준비 중...</div>
-    <div class="control-panel" id="controlPanel"></div>
   </section>
 
   <!-- SCREEN 4 : 결과 -->
@@ -519,8 +536,10 @@
    * 화면 전환
    * ------------------------------------------------------------- */
   var screens = document.querySelectorAll('.screen');
+  var appEl = document.getElementById('app');
   function showScreen(id){
     screens.forEach(function(s){ s.classList.toggle('active', s.id===id); });
+    appEl.classList.toggle('wide', id==='screen-game');
   }
 
   var toastEl = document.getElementById('toast');
