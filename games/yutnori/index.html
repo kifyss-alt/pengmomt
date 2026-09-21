@@ -219,7 +219,11 @@
     align-items:center; gap:2px; box-shadow:0 5px 0 var(--sky-a-deep); color:var(--sky-a-deep);
     font-family:'Do Hyeon'; font-size:.95rem;
   }
-  .result-btn .paws{ font-size:.85rem; letter-spacing:-2px; }
+  .result-btn .stepnum{
+    font-size:1.7rem; line-height:1; font-weight:400;
+    width:34px; height:34px; border-radius:50%; background:rgba(255,255,255,.7);
+    display:flex; align-items:center; justify-content:center;
+  }
   .result-btn:active{ transform:translateY(4px); box-shadow:0 1px 0 var(--sky-a-deep); }
   .result-btn.special{ background:var(--yellow-a); color:#7A4E00; box-shadow:0 5px 0 var(--yellow-a-deep); }
   .result-btn[disabled]{ opacity:.4; pointer-events:none; }
@@ -780,7 +784,7 @@
         var info = RESULT_INFO[key];
         var b = document.createElement('button');
         b.className='result-btn' + (key==='yut'||key==='mo' ? ' special':'');
-        b.innerHTML = '<span class="paws">'+info.paws+'</span><span>'+info.label+'</span>';
+        b.innerHTML = '<span class="stepnum">'+info.steps+'</span><span>'+info.label+'</span>';
         b.addEventListener('click', function(){
           if(game.busy) return;
           game.busy = true;
