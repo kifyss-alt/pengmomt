@@ -507,6 +507,19 @@ const vibeProjectsData = [
         isFeatured: false,
         icon: '🧺',
         previewUrl: 'games/mugunghwa-basket/index.html'
+    },
+    {
+        id: 'proj-6',
+        title: '태블릿 사용 타임아웃 게시판',
+        problem: '태블릿 놀이 시간에 누가 얼마나 사용 중인지 한눈에 보이지 않아 시간 관리가 번거로웠습니다.',
+        features: '이름을 누르면 그 위에 30분 시각 타이머(타임타이머) 표시, 5분 전 경고 색상, 시간 종료 시 알림음과 깜빡임, 자정이 지나면 자동 초기화',
+        tools: 'Claude Code / HTML / CSS / JavaScript / Web Audio API',
+        target: '유치원 교실 태블릿 놀이 시간 관리',
+        status: '공개',
+        tags: ['학급운영', '웹앱', '타이머'],
+        isFeatured: false,
+        icon: '📱',
+        previewUrl: 'games/tablet-timeout/index.html'
     }
 ];
 
