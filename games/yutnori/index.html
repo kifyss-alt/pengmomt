@@ -53,7 +53,10 @@
     color:var(--pink-a-deep); text-decoration:none; opacity:.9;
   }
   .app-footer .footer-links a:hover{ text-decoration:underline; }
-  .app-footer .footer-links .dot{ margin:0 6px; opacity:.6; }
+  .app-footer .footer-links .dot{
+    display:inline-block; width:4px; height:4px; margin:0 7px;
+    border-radius:50%; background:currentColor; opacity:.5; vertical-align:baseline;
+  }
 
   .screen{ display:none; flex-direction:column; gap:16px; animation:fadeUp .35s ease; }
   .screen.active{ display:flex; }
@@ -340,9 +343,9 @@
     © 2026 김선옥(펭맘선생님) · 충남 홍성교육지원청 공립유치원 교사<br>
     본 콘텐츠의 저작권은 원작자에게 있습니다.<br>
     <span class="footer-links">
-      <a href="https://www.instagram.com/pengmom.t" target="_blank" rel="noopener">📷 인스타그램 @pengmom.t</a>
-      <span class="dot">·</span>
-      <a href="https://blog.naver.com/pengmomt" target="_blank" rel="noopener">📝 네이버블로그 펭맘의기적</a>
+      <a href="https://www.instagram.com/pengmom.t" target="_blank" rel="noopener">인스타그램 @pengmom.t</a>
+      <span class="dot"></span>
+      <a href="https://blog.naver.com/pengmomt" target="_blank" rel="noopener">네이버블로그 펭맘의기적</a>
     </span>
   </footer>
 
