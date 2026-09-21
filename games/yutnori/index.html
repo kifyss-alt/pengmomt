@@ -1,0 +1,923 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>동물 윷놀이</title>
+<meta name="description" content="말판 이동 규칙을 몰라도 도개걸윷모만 고르면 동물 말이 저절로 움직이는 유아용 윷놀이 게임. 음성 안내와 큰 아이콘으로 글씨를 몰라도 즐길 수 있어요.">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Gaegu:wght@400;700&family=Jua&display=swap">
+<style>
+  :root{
+    --cream:#FFF7E8;
+    --pink:#FFD9EC;
+    --sky:#D8F1FF;
+    --card:#FFFFFF;
+    --ink:#5B4636;
+    --ink-soft:#8A7462;
+    --pink-a:#FF8FB1;
+    --pink-a-deep:#F0669A;
+    --sky-a:#5FC2F2;
+    --sky-a-deep:#2FA1DC;
+    --yellow-a:#FFC93C;
+    --yellow-a-deep:#F0A500;
+    --green-a:#7BD389;
+    --green-a-deep:#4FB562;
+    --purple-a:#B892FF;
+    --shadow: 0 8px 0 rgba(0,0,0,.08), 0 14px 24px rgba(90,60,40,.12);
+  }
+  *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html,body{ margin:0; min-height:100%; }
+  body{
+    font-family:'Gaegu','Jua',sans-serif;
+    color:var(--ink);
+    background:
+      radial-gradient(circle at 12% 18%, rgba(255,255,255,.6), transparent 40%),
+      radial-gradient(circle at 88% 82%, rgba(255,255,255,.5), transparent 42%),
+      linear-gradient(150deg, var(--sky) 0%, var(--cream) 45%, var(--pink) 100%);
+    min-height:100vh;
+    overflow-x:hidden;
+    -webkit-font-smoothing:antialiased;
+  }
+  h1,h2,h3{ font-family:'Jua','Black Han Sans',sans-serif; margin:0; text-wrap:balance; word-break:keep-all; }
+  button{ font-family:inherit; cursor:pointer; border:none; }
+  .back-link{
+    position:fixed; top:10px; left:10px; z-index:9999;
+    font-family:'Gaegu',sans-serif; font-size:.85rem; font-weight:700;
+    color:var(--ink-soft); text-decoration:none;
+    background:rgba(255,255,255,.75); padding:.3rem .7rem; border-radius:999px;
+    box-shadow:0 2px 6px rgba(0,0,0,.08);
+    transition:transform .15s ease, color .15s ease;
+  }
+  .back-link:hover{ color:var(--pink-a-deep); transform:translateY(-1px); }
+
+  .app{ max-width:640px; margin:0 auto; padding:56px 16px 24px; min-height:100vh; }
+
+  .screen{ display:none; flex-direction:column; gap:16px; animation:fadeUp .35s ease; }
+  .screen.active{ display:flex; }
+  @keyframes fadeUp{ from{opacity:0; transform:translateY(10px);} to{opacity:1; transform:translateY(0);} }
+
+  .hero-title{
+    text-align:center; font-size:2.1rem; color:var(--pink-a-deep);
+    text-shadow: 2px 2px 0 rgba(255,255,255,.8);
+    letter-spacing:1px;
+  }
+  .hero-sub{ text-align:center; font-size:1.1rem; color:var(--ink-soft); margin-top:2px; }
+
+  .card{
+    background:var(--card); border-radius:28px; padding:20px 18px;
+    box-shadow:var(--shadow);
+  }
+
+  .step-title{ font-size:1.35rem; text-align:center; color:var(--ink); margin-bottom:4px; }
+
+  .count-row{ display:flex; gap:12px; justify-content:center; flex-wrap:wrap; }
+  .count-btn{
+    width:84px; height:84px; border-radius:24px; background:var(--sky);
+    font-size:2rem; font-family:'Jua',sans-serif; color:var(--sky-a-deep);
+    box-shadow:0 5px 0 rgba(47,161,220,.25);
+    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px;
+    transition:transform .12s ease, box-shadow .12s ease;
+  }
+  .count-btn span.unit{ font-size:.7rem; color:var(--ink-soft); }
+  .count-btn:active{ transform:translateY(4px); box-shadow:0 1px 0 rgba(47,161,220,.25); }
+  .count-btn.selected{ background:var(--yellow-a); color:#7A4E00; box-shadow:0 5px 0 var(--yellow-a-deep); }
+
+  .slots{ display:flex; flex-direction:column; gap:14px; margin-top:16px; }
+  .slot{ background:var(--cream); border-radius:22px; padding:12px; border:3px dashed transparent; }
+  .slot.filled{ border-color: var(--slot-color, var(--pink-a)); }
+  .slot-head{ display:flex; align-items:center; gap:8px; margin-bottom:8px; font-size:1.05rem; }
+  .slot-num{
+    width:30px; height:30px; border-radius:50%; background:var(--pink-a); color:#fff;
+    display:flex; align-items:center; justify-content:center; font-family:'Jua'; font-size:1rem;
+    flex-shrink:0;
+  }
+  .slot-picked{ margin-left:auto; font-size:1.6rem; }
+  .animal-grid{ display:grid; grid-template-columns:repeat(4,1fr); gap:8px; }
+  .animal-btn{
+    background:#fff; border-radius:16px; padding:8px 2px; display:flex; flex-direction:column;
+    align-items:center; gap:2px; box-shadow:0 3px 0 rgba(0,0,0,.06); transition:transform .1s ease;
+  }
+  .animal-btn .emo{ font-size:1.6rem; }
+  .animal-btn .nm{ font-size:.72rem; color:var(--ink-soft); }
+  .animal-btn.active{ background:var(--animal-color,#eee); transform:translateY(-2px); box-shadow:0 5px 0 rgba(0,0,0,.15); }
+  .animal-btn.active .nm{ color:#fff; font-weight:700; }
+  .animal-btn.taken:not(.active){ opacity:.28; filter:grayscale(.6); pointer-events:none; }
+
+  .big-btn{
+    display:block; width:100%; padding:16px; border-radius:22px; font-size:1.3rem;
+    font-family:'Jua',sans-serif; color:#fff; background:var(--green-a);
+    box-shadow:0 6px 0 var(--green-a-deep);
+    transition:transform .12s ease, box-shadow .12s ease;
+  }
+  .big-btn:active{ transform:translateY(5px); box-shadow:0 1px 0 var(--green-a-deep); }
+  .big-btn[disabled]{ background:#ddd !important; box-shadow:0 6px 0 #bbb !important; color:#fff; opacity:.7; pointer-events:none; }
+  .ghost-btn{
+    display:block; width:100%; padding:10px; border-radius:18px; font-size:1rem;
+    background:transparent; color:var(--ink-soft); text-align:center; font-family:'Gaegu';
+  }
+
+  .mode-cards{ display:flex; flex-direction:column; gap:14px; }
+  .mode-card{
+    background:var(--cream); border-radius:24px; padding:18px; text-align:center;
+    border:4px solid transparent; transition:transform .12s ease;
+  }
+  .mode-card .ico{ font-size:2.6rem; }
+  .mode-card .ti{ font-size:1.25rem; margin:4px 0 2px; }
+  .mode-card .de{ font-size:.9rem; color:var(--ink-soft); }
+  .mode-card.selected{ border-color:var(--pink-a); background:#fff; transform:scale(1.02); box-shadow:var(--shadow); }
+
+  /* ---- game screen ---- */
+  #screen-game{ gap:10px; }
+  .game-topbar{ display:flex; align-items:center; gap:8px; }
+  .icon-btn{
+    width:42px; height:42px; border-radius:50%; background:#fff; font-size:1.2rem;
+    box-shadow:0 3px 0 rgba(0,0,0,.08); flex-shrink:0;
+  }
+  .status-row{ flex:1; display:flex; gap:6px; overflow-x:auto; padding:2px; }
+  .status-chip{
+    display:flex; align-items:center; gap:4px; background:#fff; border-radius:999px;
+    padding:5px 10px 5px 5px; box-shadow:0 2px 0 rgba(0,0,0,.06); flex-shrink:0;
+    border:3px solid transparent; opacity:.55; transition:all .2s ease;
+  }
+  .status-chip .badge{
+    width:24px; height:24px; border-radius:50%; background:var(--c,#ccc);
+    display:flex; align-items:center; justify-content:center; font-size:.95rem;
+  }
+  .status-chip .nm{ font-size:.72rem; color:var(--ink-soft); }
+  .status-chip.active{ opacity:1; border-color:var(--c,#ccc); transform:translateY(-2px); }
+  .status-chip.done{ opacity:.9; }
+  .status-chip .medal{ font-size:.8rem; }
+
+  .trophy-shelf{ display:flex; gap:6px; min-height:0; flex-wrap:wrap; }
+  .trophy-shelf .tp{ font-size:1.4rem; background:#fff; border-radius:50%; width:34px; height:34px; display:flex; align-items:center; justify-content:center; box-shadow:0 2px 0 rgba(0,0,0,.08); }
+
+  .board-wrap{ display:flex; justify-content:center; }
+  .board{
+    position:relative; width:100%; max-width:520px; aspect-ratio:1/1;
+    background:
+      radial-gradient(circle at 50% 50%, #fffdf5 0%, #FFF2DA 60%, #FBE4BE 100%);
+    border-radius:26px; box-shadow:var(--shadow), inset 0 0 0 6px #fff, inset 0 0 0 10px #FFE1AE;
+  }
+  .board-lines{ position:absolute; inset:0; width:100%; height:100%; }
+  .board-lines line{ stroke:#E3B168; stroke-width:1.6; stroke-linecap:round; }
+  .dot{
+    position:absolute; width:5.6%; height:5.6%; border-radius:50%;
+    background:#fff; border:2px solid #E3B168; transform:translate(-50%,-50%);
+  }
+  .dot.corner{ width:9.5%; height:9.5%; background:#FFE1AE; border-color:#E0973F; }
+  .dot.center{ width:11%; height:11%; background:linear-gradient(135deg,#FFD9EC,#D8F1FF); border-color:var(--pink-a-deep); display:flex; align-items:center; justify-content:center; font-size:1rem; }
+  .dot.home{ width:13%; height:13%; background:linear-gradient(135deg,#FFEFC0,#FFD9EC); border:3px solid var(--yellow-a-deep); display:flex; align-items:center; justify-content:center; font-size:1.3rem; }
+
+  .token{
+    position:absolute; width:11%; height:11%; border-radius:50%;
+    transform:translate(-50%,-50%);
+    display:flex; align-items:center; justify-content:center; font-size:1.35rem;
+    background:var(--tc,#ddd); border:3px solid #fff;
+    box-shadow:0 4px 6px rgba(0,0,0,.25);
+    transition:left .26s ease, top .26s ease;
+    z-index:5;
+  }
+  .token.turn-glow{ box-shadow:0 0 0 5px rgba(255,255,255,.6), 0 0 14px 4px var(--tc,#ff9), 0 4px 6px rgba(0,0,0,.25); }
+
+  .turn-banner{
+    text-align:center; background:#fff; border-radius:20px; padding:10px 14px;
+    box-shadow:var(--shadow); font-size:1.15rem; min-height:1.4em;
+  }
+  .turn-banner b{ color:var(--pink-a-deep); }
+
+  .control-panel{ background:var(--card); border-radius:26px; padding:16px; box-shadow:var(--shadow); }
+
+  .sticks-row{ display:flex; justify-content:center; gap:8px; margin-bottom:14px; height:52px; align-items:center; }
+  .stick{
+    width:14px; height:46px; border-radius:8px; background:#F4E3C1; border:2px solid #C9974C;
+    transition:transform .12s ease, background .12s ease;
+  }
+  .stick.flip{ background:#8B5E3C; border-color:#5D3A20; }
+
+  .throw-btn{ background:var(--pink-a); box-shadow:0 6px 0 var(--pink-a-deep); }
+  .throw-btn:active{ box-shadow:0 1px 0 var(--pink-a-deep); }
+
+  .manual-grid{ display:grid; grid-template-columns:repeat(5,1fr); gap:6px; }
+  .result-btn{
+    background:var(--sky); border-radius:16px; padding:10px 2px; display:flex; flex-direction:column;
+    align-items:center; gap:2px; box-shadow:0 5px 0 var(--sky-a-deep); color:var(--sky-a-deep);
+    font-family:'Jua'; font-size:.95rem;
+  }
+  .result-btn .paws{ font-size:.85rem; letter-spacing:-2px; }
+  .result-btn:active{ transform:translateY(4px); box-shadow:0 1px 0 var(--sky-a-deep); }
+  .result-btn.special{ background:var(--yellow-a); color:#7A4E00; box-shadow:0 5px 0 var(--yellow-a-deep); }
+  .result-btn[disabled]{ opacity:.4; pointer-events:none; }
+
+  .toast{
+    position:fixed; left:50%; top:18%; transform:translate(-50%,-20px); z-index:60;
+    background:#fff; border-radius:24px; padding:18px 26px; box-shadow:0 10px 30px rgba(0,0,0,.25);
+    text-align:center; opacity:0; transition:opacity .25s ease, transform .25s ease; pointer-events:none;
+    max-width:86vw;
+  }
+  .toast.show{ opacity:1; transform:translate(-50%,0); }
+  .toast .big{ font-size:2.4rem; }
+  .toast .txt{ font-size:1.15rem; color:var(--ink); margin-top:2px; }
+
+  .confetti{ position:fixed; top:-20px; width:10px; height:14px; border-radius:3px; z-index:70; pointer-events:none; animation:fall linear forwards; }
+  @keyframes fall{ to{ transform:translateY(110vh) rotate(540deg); opacity:.9; } }
+
+  #screen-end{ text-align:center; }
+  .rank-list{ display:flex; flex-direction:column; gap:10px; margin:14px 0; }
+  .rank-row{
+    display:flex; align-items:center; gap:10px; background:var(--cream); border-radius:18px;
+    padding:10px 14px; text-align:left;
+  }
+  .rank-row .medal{ font-size:1.6rem; width:34px; text-align:center; }
+  .rank-row .badge{ width:36px; height:36px; border-radius:50%; background:var(--c,#ccc); display:flex; align-items:center; justify-content:center; font-size:1.2rem; }
+  .rank-row .nm{ font-size:1.05rem; }
+
+  .mute-off .snd-on{ display:none; }
+  .mute-on .snd-off{ display:none; }
+  #btnSound .snd-off{ display:none; }
+  #btnSound.muted .snd-on{ display:none; }
+  #btnSound.muted .snd-off{ display:inline; }
+
+  @media (max-width:380px){
+    .hero-title{ font-size:1.7rem; }
+    .count-btn{ width:72px; height:72px; font-size:1.6rem; }
+  }
+</style>
+</head>
+<body>
+<a href="../../index.html" class="back-link">← 펭맘 스페이스로</a>
+
+<div class="app" id="app">
+
+  <!-- SCREEN 1 : 팀 선택 -->
+  <section class="screen active" id="screen-setup">
+    <h1 class="hero-title">🐾 동물 윷놀이 🐾</h1>
+    <p class="hero-sub">내 동물 팀을 골라주세요!</p>
+
+    <div class="card">
+      <div class="step-title">몇 명이서 놀까요?</div>
+      <div class="count-row" id="countRow"></div>
+    </div>
+
+    <div class="card" id="slotsCard" style="display:none;">
+      <div class="step-title">각자 동물 팀을 골라요</div>
+      <div class="slots" id="slots"></div>
+    </div>
+
+    <button class="big-btn" id="btnToMode" disabled>다음으로 →</button>
+  </section>
+
+  <!-- SCREEN 2 : 윷 던지는 방법 -->
+  <section class="screen" id="screen-mode">
+    <h1 class="hero-title">🎯 윷을 어떻게 던질까요?</h1>
+    <div class="card">
+      <div class="mode-cards">
+        <button class="mode-card" id="modeVirtual" data-mode="virtual">
+          <div class="ico">🎲</div>
+          <div class="ti">화면에서 윷 던지기</div>
+          <div class="de">진짜 윷이 없어도 버튼을 누르면 화면 속 윷이 저절로 던져져요</div>
+        </button>
+        <button class="mode-card" id="modeManual" data-mode="manual">
+          <div class="ico">🖐️</div>
+          <div class="ti">진짜 윷 던지기</div>
+          <div class="de">진짜 윷을 던진 다음, 나온 모양 버튼을 눌러주세요</div>
+        </button>
+      </div>
+    </div>
+    <button class="big-btn" id="btnToGame" disabled>게임 시작! 🚩</button>
+    <button class="ghost-btn" id="btnBackSetup">← 팀 다시 고르기</button>
+  </section>
+
+  <!-- SCREEN 3 : 게임 보드 -->
+  <section class="screen" id="screen-game">
+    <div class="game-topbar">
+      <button class="icon-btn" id="btnRestart" title="다시하기">🔄</button>
+      <div class="status-row" id="statusRow"></div>
+      <button class="icon-btn" id="btnModeSwitch" title="던지기 방법 바꾸기">🎲</button>
+      <button class="icon-btn" id="btnSound" title="소리 끄고 켜기"><span class="snd-on">🔊</span><span class="snd-off">🔇</span></button>
+    </div>
+    <div class="trophy-shelf" id="trophyShelf"></div>
+    <div class="board-wrap">
+      <div class="board" id="board">
+        <svg class="board-lines" viewBox="0 0 100 100" id="boardLines"></svg>
+      </div>
+    </div>
+    <div class="turn-banner" id="turnBanner">준비 중...</div>
+    <div class="control-panel" id="controlPanel"></div>
+  </section>
+
+  <!-- SCREEN 4 : 결과 -->
+  <section class="screen" id="screen-end">
+    <h1 class="hero-title">🎉 게임 끝! 🎉</h1>
+    <div class="card">
+      <div class="step-title">최종 순위예요</div>
+      <div class="rank-list" id="rankList"></div>
+      <button class="big-btn" id="btnPlayAgain">다시 놀기 🔁</button>
+    </div>
+  </section>
+
+</div>
+
+<div class="toast" id="toast">
+  <div class="big" id="toastBig">🐾</div>
+  <div class="txt" id="toastTxt"></div>
+</div>
+
+<script>
+(function(){
+  'use strict';
+
+  /* ---------------------------------------------------------------
+   * 동물 팀 정의
+   * ------------------------------------------------------------- */
+  var ANIMALS = [
+    {id:'bear',   name:'곰돌이', emoji:'🐻', color:'#B98461'},
+    {id:'rabbit', name:'토끼',   emoji:'🐰', color:'#FF9EC4'},
+    {id:'fox',    name:'여우',   emoji:'🦊', color:'#FF9F45'},
+    {id:'tiger',  name:'호랑이', emoji:'🐯', color:'#FF7A5C'},
+    {id:'panda',  name:'판다',   emoji:'🐼', color:'#6EC6CA'},
+    {id:'dog',    name:'강아지', emoji:'🐶', color:'#FFD166'},
+    {id:'cat',    name:'고양이', emoji:'🐱', color:'#B892FF'},
+    {id:'lion',   name:'사자',   emoji:'🦁', color:'#4DB6E8'}
+  ];
+
+  var RESULT_INFO = {
+    do:  {steps:1, label:'도', voice:'도! 한 칸!',           paws:'🐾'},
+    gae: {steps:2, label:'개', voice:'개! 두 칸!',           paws:'🐾🐾'},
+    geol:{steps:3, label:'걸', voice:'걸! 세 칸!',           paws:'🐾🐾🐾'},
+    yut: {steps:4, label:'윷', voice:'윷! 네 칸! 한 번 더!',  paws:'🐾🐾🐾🐾'},
+    mo:  {steps:5, label:'모', voice:'모! 다섯 칸! 한 번 더!',paws:'🐾🐾🐾🐾🐾'}
+  };
+
+  /* ---------------------------------------------------------------
+   * 윷판 좌표 & 이동 규칙
+   * 아이들에게 말판 규칙(코너 지름길)을 설명하기 번거로우므로,
+   * 코너/중앙에 도착하면 항상 "홈까지 가장 빠른 길"로 자동 이동시킨다.
+   * (그 결과 5-15 대각선의 후반부 두 칸(a3,a4)은 실제로는 절대 쓰이지
+   * 않지만, 진짜 윷판처럼 보이도록 점만 그려둔다.)
+   * ------------------------------------------------------------- */
+  var NODES = {};
+  function lerp(a,b,t){ return a + (b-a)*t; }
+  function edgePts(p0,p1,ids){
+    ids.forEach(function(id,i){
+      var t=(i+1)/5;
+      NODES[id] = {x:lerp(p0.x,p1.x,t), y:lerp(p0.y,p1.y,t), type:'outer'};
+    });
+  }
+  function diagPts(p0,p1,ids){
+    ids.forEach(function(id,i){
+      var t=(i+1)/3;
+      NODES[id] = {x:lerp(p0.x,p1.x,t), y:lerp(p0.y,p1.y,t), type:'diag'};
+    });
+  }
+  var HOME_POS={x:50,y:95}, RIGHT={x:95,y:50}, TOP={x:50,y:5}, LEFT={x:5,y:50}, CENTER={x:50,y:50};
+  NODES.START = {x:HOME_POS.x, y:HOME_POS.y, type:'home'};
+  NODES.HOME  = {x:HOME_POS.x, y:HOME_POS.y, type:'home'};
+  NODES.O5  = {x:RIGHT.x, y:RIGHT.y, type:'corner'};
+  NODES.O10 = {x:TOP.x,   y:TOP.y,   type:'corner'};
+  NODES.O15 = {x:LEFT.x,  y:LEFT.y,  type:'corner'};
+  NODES.C   = {x:CENTER.x,y:CENTER.y,type:'center'};
+  edgePts(HOME_POS, RIGHT, ['O1','O2','O3','O4']);
+  edgePts(RIGHT, TOP,      ['O6','O7','O8','O9']);
+  edgePts(TOP, LEFT,       ['O11','O12','O13','O14']);
+  edgePts(LEFT, HOME_POS,  ['O16','O17','O18','O19']);
+  diagPts(RIGHT, CENTER,   ['a1','a2']);
+  diagPts(CENTER, LEFT,    ['a3','a4']);
+  diagPts(TOP, CENTER,     ['b1','b2']);
+  diagPts(CENTER, HOME_POS,['b3','b4']);
+
+  var NEXT = {
+    START:'O1',
+    O1:'O2', O2:'O3', O3:'O4', O4:'O5',
+    O5:'a1', a1:'a2', a2:'C',
+    O6:'O7', O7:'O8', O8:'O9', O9:'O10',
+    O10:'b1', b1:'b2', b2:'C',
+    O11:'O12', O12:'O13', O13:'O14', O14:'O15',
+    O15:'O16',
+    O16:'O17', O17:'O18', O18:'O19', O19:'HOME',
+    C:'b3', b3:'b4', b4:'HOME'
+  };
+
+  function computePath(fromNode, steps){
+    var path=[]; var cur=fromNode;
+    for(var i=0;i<steps;i++){
+      if(cur==='HOME') break;
+      cur = NEXT[cur];
+      path.push(cur);
+      if(cur==='HOME') break;
+    }
+    return path;
+  }
+
+  /* ---------------------------------------------------------------
+   * 사운드 / 음성
+   * ------------------------------------------------------------- */
+  var soundOn = true;
+  var audioCtx = null;
+  function ensureAudio(){
+    if(!audioCtx){
+      try{ audioCtx = new (window.AudioContext||window.webkitAudioContext)(); }catch(e){}
+    }
+    return audioCtx;
+  }
+  function playPop(freq){
+    if(!soundOn) return;
+    var ctx = ensureAudio();
+    if(!ctx) return;
+    try{
+      var o = ctx.createOscillator(), g = ctx.createGain();
+      o.type='sine'; o.frequency.value = freq||520;
+      g.gain.setValueAtTime(0.18, ctx.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime+0.18);
+      o.connect(g); g.connect(ctx.destination);
+      o.start(); o.stop(ctx.currentTime+0.19);
+    }catch(e){}
+  }
+  function playFanfare(){
+    if(!soundOn) return;
+    [523,659,784,1047].forEach(function(f,i){ setTimeout(function(){ playPop(f); }, i*130); });
+  }
+  var koVoice = null;
+  function loadVoice(){
+    if(!('speechSynthesis' in window)) return;
+    var vs = window.speechSynthesis.getVoices();
+    koVoice = vs.find(function(v){ return v.lang && v.lang.indexOf('ko')===0; }) || null;
+  }
+  if('speechSynthesis' in window){
+    loadVoice();
+    window.speechSynthesis.onvoiceschanged = loadVoice;
+  }
+  function speak(text){
+    if(!soundOn) return;
+    if(!('speechSynthesis' in window)) return;
+    try{
+      window.speechSynthesis.cancel();
+      var u = new SpeechSynthesisUtterance(text);
+      u.lang='ko-KR'; u.rate=0.92; u.pitch=1.25;
+      if(koVoice) u.voice = koVoice;
+      window.speechSynthesis.speak(u);
+    }catch(e){}
+  }
+
+  function delay(ms){ return new Promise(function(res){ setTimeout(res, ms); }); }
+
+  /* ---------------------------------------------------------------
+   * 화면 전환
+   * ------------------------------------------------------------- */
+  var screens = document.querySelectorAll('.screen');
+  function showScreen(id){
+    screens.forEach(function(s){ s.classList.toggle('active', s.id===id); });
+  }
+
+  var toastEl = document.getElementById('toast');
+  var toastBig = document.getElementById('toastBig');
+  var toastTxt = document.getElementById('toastTxt');
+  var toastTimer=null;
+  function showToast(big, text, ms){
+    toastBig.textContent = big;
+    toastTxt.textContent = text;
+    toastEl.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function(){ toastEl.classList.remove('show'); }, ms||1600);
+  }
+
+  function confettiBurst(n){
+    var colors=['#FF8FB1','#5FC2F2','#FFC93C','#7BD389','#B892FF'];
+    for(var i=0;i<(n||26);i++){
+      var el = document.createElement('div');
+      el.className='confetti';
+      el.style.left = (Math.random()*100)+'vw';
+      el.style.background = colors[Math.floor(Math.random()*colors.length)];
+      el.style.animationDuration = (1.6+Math.random()*1.2)+'s';
+      el.style.opacity = String(0.7+Math.random()*0.3);
+      document.body.appendChild(el);
+      (function(node){ setTimeout(function(){ node.remove(); }, 3200); })(el);
+    }
+  }
+
+  /* ---------------------------------------------------------------
+   * 설정 상태 (팀 선택)
+   * ------------------------------------------------------------- */
+  var setup = { count:null, picks:[null,null,null,null] };
+
+  var countRow = document.getElementById('countRow');
+  [2,3,4].forEach(function(n){
+    var b = document.createElement('button');
+    b.className='count-btn';
+    b.innerHTML = n+'<span class="unit">명</span>';
+    b.addEventListener('click', function(){
+      setup.count = n;
+      setup.picks = [null,null,null,null];
+      Array.from(countRow.children).forEach(function(c){ c.classList.remove('selected'); });
+      b.classList.add('selected');
+      renderSlots();
+      updateNextBtn();
+      speak(n+'명이서 놀아요!');
+    });
+    countRow.appendChild(b);
+  });
+
+  var slotsCard = document.getElementById('slotsCard');
+  var slotsWrap = document.getElementById('slots');
+  function renderSlots(){
+    slotsWrap.innerHTML='';
+    slotsCard.style.display = setup.count ? 'block' : 'none';
+    for(var i=0;i<setup.count;i++){
+      (function(idx){
+        var slot = document.createElement('div');
+        slot.className='slot';
+        var head = document.createElement('div');
+        head.className='slot-head';
+        head.innerHTML = '<span class="slot-num">'+(idx+1)+'</span><span>번 친구</span><span class="slot-picked" id="slotPicked'+idx+'"></span>';
+        var grid = document.createElement('div');
+        grid.className='animal-grid';
+        ANIMALS.forEach(function(a){
+          var btn = document.createElement('button');
+          btn.className='animal-btn';
+          btn.style.setProperty('--animal-color', a.color);
+          btn.innerHTML = '<span class="emo">'+a.emoji+'</span><span class="nm">'+a.name+'</span>';
+          btn.addEventListener('click', function(){
+            if(setup.picks.indexOf(a.id) !== -1) return;
+            setup.picks[idx] = a.id;
+            speak(a.name+' 팀 선택!');
+            renderSlots();
+            updateNextBtn();
+          });
+          grid.appendChild(btn);
+        });
+        slot.appendChild(head); slot.appendChild(grid);
+        slotsWrap.appendChild(slot);
+      })(i);
+    }
+    // reflect selections / disable taken animals
+    for(var i2=0;i2<setup.count;i2++){
+      var picked = setup.picks[i2];
+      var slotEl = slotsWrap.children[i2];
+      var pickedLbl = document.getElementById('slotPicked'+i2);
+      slotEl.classList.toggle('filled', !!picked);
+      if(picked){
+        var a2 = ANIMALS.find(function(x){return x.id===picked;});
+        slotEl.style.setProperty('--slot-color', a2.color);
+        pickedLbl.textContent = a2.emoji;
+      } else {
+        pickedLbl.textContent='';
+      }
+      Array.from(slotEl.querySelectorAll('.animal-btn')).forEach(function(btn, ai){
+        var animal = ANIMALS[ai];
+        var isThis = picked === animal.id;
+        btn.classList.toggle('active', isThis);
+        var takenByOther = setup.picks.indexOf(animal.id) !== -1 && !isThis;
+        btn.classList.toggle('taken', takenByOther);
+      });
+    }
+  }
+
+  var btnToMode = document.getElementById('btnToMode');
+  function updateNextBtn(){
+    var ok = setup.count && setup.picks.slice(0,setup.count).every(function(p){ return !!p; });
+    btnToMode.disabled = !ok;
+  }
+  btnToMode.addEventListener('click', function(){
+    showScreen('screen-mode');
+  });
+
+  /* ---------------------------------------------------------------
+   * 던지기 모드 선택
+   * ------------------------------------------------------------- */
+  var chosenMode = 'virtual';
+  var modeCards = document.querySelectorAll('.mode-card');
+  var btnToGame = document.getElementById('btnToGame');
+  modeCards.forEach(function(c){
+    c.addEventListener('click', function(){
+      chosenMode = c.getAttribute('data-mode');
+      modeCards.forEach(function(x){ x.classList.toggle('selected', x===c); });
+      btnToGame.disabled = false;
+      speak(chosenMode==='virtual' ? '화면에서 윷을 던질게요!' : '진짜 윷을 던지고 알려주세요!');
+    });
+  });
+  document.getElementById('btnBackSetup').addEventListener('click', function(){ showScreen('screen-setup'); });
+  btnToGame.addEventListener('click', function(){
+    startGame();
+  });
+
+  /* ---------------------------------------------------------------
+   * 게임 상태
+   * ------------------------------------------------------------- */
+  var game = null;
+
+  function buildPlayers(){
+    var players=[];
+    for(var i=0;i<setup.count;i++){
+      var a = ANIMALS.find(function(x){ return x.id===setup.picks[i]; });
+      players.push({ slot:i, animal:a, node:'START', finished:false, finishRank:null });
+    }
+    return players;
+  }
+
+  function startGame(){
+    game = {
+      players: buildPlayers(),
+      mode: chosenMode,
+      currentIdx: 0,
+      busy:false,
+      finishedCount:0
+    };
+    buildBoardDom();
+    renderStatusRow();
+    renderTrophyShelf();
+    renderTokens();
+    renderControlPanel();
+    showScreen('screen-game');
+    announceTurn(true);
+  }
+
+  /* ----- 보드 그리기 ----- */
+  var boardEl = document.getElementById('board');
+  var linesEl = document.getElementById('boardLines');
+  var dotsBuilt = false;
+  function buildBoardDom(){
+    if(dotsBuilt) return;
+    dotsBuilt = true;
+    function line(p0,p1){
+      var l = document.createElementNS('http://www.w3.org/2000/svg','line');
+      l.setAttribute('x1',p0.x); l.setAttribute('y1',p0.y);
+      l.setAttribute('x2',p1.x); l.setAttribute('y2',p1.y);
+      linesEl.appendChild(l);
+    }
+    var outerSeq = ['START','O1','O2','O3','O4','O5','O6','O7','O8','O9','O10','O11','O12','O13','O14','O15','O16','O17','O18','O19','START'];
+    for(var i=0;i<outerSeq.length-1;i++){ line(NODES[outerSeq[i]], NODES[outerSeq[i+1]]); }
+    ['O5','a1','a2','C','a3','a4','O15'].forEach(function(id,i,arr){ if(i<arr.length-1) line(NODES[id],NODES[arr[i+1]]); });
+    ['O10','b1','b2','C','b3','b4','START'].forEach(function(id,i,arr){ if(i<arr.length-1) line(NODES[id],NODES[arr[i+1]]); });
+
+    Object.keys(NODES).forEach(function(id){
+      if(id==='HOME') return;
+      var n = NODES[id];
+      var d = document.createElement('div');
+      d.className = 'dot' + (n.type==='corner' ? ' corner' : n.type==='center' ? ' center' : n.type==='home' ? ' home' : '');
+      d.style.left = n.x+'%'; d.style.top = n.y+'%';
+      if(n.type==='center') d.textContent='✨';
+      if(n.type==='home') d.textContent='🏁';
+      boardEl.appendChild(d);
+    });
+
+    game && game.players.forEach(function(p){
+      var t = document.createElement('div');
+      t.className='token';
+      t.id='token-'+p.slot;
+      t.style.setProperty('--tc', p.animal.color);
+      t.textContent = p.animal.emoji;
+      boardEl.appendChild(t);
+    });
+  }
+
+  function nodeOccupants(nodeId, excludeFinished){
+    return game.players.filter(function(p){ return p.node===nodeId && (!excludeFinished || !p.finished); });
+  }
+  var OFFSETS4 = [{x:-3.2,y:-3.2},{x:3.2,y:-3.2},{x:-3.2,y:3.2},{x:3.2,y:3.2}];
+  function renderTokens(){
+    game.players.forEach(function(p){
+      var t = document.getElementById('token-'+p.slot);
+      if(!t) return;
+      if(p.finished){ t.style.display='none'; return; }
+      t.style.display='flex';
+      var group = nodeOccupants(p.node, true);
+      var idx = group.indexOf(p);
+      var base = NODES[p.node];
+      var off = group.length>1 ? OFFSETS4[idx % OFFSETS4.length] : {x:0,y:0};
+      t.style.left = (base.x+off.x)+'%';
+      t.style.top = (base.y+off.y)+'%';
+      t.classList.toggle('turn-glow', game.players[game.currentIdx]===p && !p.finished);
+    });
+  }
+
+  function renderTrophyShelf(){
+    var wrap = document.getElementById('trophyShelf');
+    wrap.innerHTML='';
+    game.players.filter(function(p){return p.finished;})
+      .sort(function(a,b){ return a.finishRank-b.finishRank; })
+      .forEach(function(p){
+        var el = document.createElement('div');
+        el.className='tp';
+        el.title = p.animal.name+' 팀';
+        el.textContent = p.animal.emoji;
+        wrap.appendChild(el);
+      });
+  }
+
+  function renderStatusRow(){
+    var row = document.getElementById('statusRow');
+    row.innerHTML='';
+    game.players.forEach(function(p, idx){
+      var chip = document.createElement('div');
+      chip.className='status-chip' + (idx===game.currentIdx && !p.finished ? ' active':'') + (p.finished?' done':'');
+      chip.style.setProperty('--c', p.animal.color);
+      chip.innerHTML = '<span class="badge">'+p.animal.emoji+'</span><span class="nm">'+p.animal.name+'</span>'+(p.finished?'<span class="medal">🏆</span>':'');
+      row.appendChild(chip);
+    });
+  }
+
+  /* ----- 컨트롤 패널 ----- */
+  function renderControlPanel(){
+    var panel = document.getElementById('controlPanel');
+    panel.innerHTML='';
+    if(game.mode==='virtual'){
+      var sticksRow = document.createElement('div');
+      sticksRow.className='sticks-row';
+      for(var i=0;i<4;i++){
+        var s = document.createElement('div'); s.className='stick'; s.id='stick'+i;
+        sticksRow.appendChild(s);
+      }
+      var btn = document.createElement('button');
+      btn.className='big-btn throw-btn'; btn.id='btnThrow';
+      btn.textContent = '🎲 윷 던지기!';
+      btn.addEventListener('click', function(){
+        if(game.busy) return;
+        game.busy = true;
+        setControlsEnabled(false);
+        onVirtualThrow();
+      });
+      panel.appendChild(sticksRow);
+      panel.appendChild(btn);
+    } else {
+      var grid = document.createElement('div');
+      grid.className='manual-grid';
+      Object.keys(RESULT_INFO).forEach(function(key){
+        var info = RESULT_INFO[key];
+        var b = document.createElement('button');
+        b.className='result-btn' + (key==='yut'||key==='mo' ? ' special':'');
+        b.innerHTML = '<span class="paws">'+info.paws+'</span><span>'+info.label+'</span>';
+        b.addEventListener('click', function(){
+          if(game.busy) return;
+          game.busy = true;
+          setControlsEnabled(false);
+          handleResult(key);
+        });
+        grid.appendChild(b);
+      });
+      panel.appendChild(grid);
+    }
+  }
+  function setControlsEnabled(on){
+    document.querySelectorAll('#controlPanel button').forEach(function(b){ b.disabled=!on; });
+  }
+
+  function weightedThrow(){
+    var r = Math.random()*100;
+    if(r<35) return 'do';
+    if(r<65) return 'gae';
+    if(r<85) return 'geol';
+    if(r<93) return 'yut';
+    return 'mo';
+  }
+
+  function onVirtualThrow(){
+    ensureAudio();
+    var els = [0,1,2,3].map(function(i){ return document.getElementById('stick'+i); });
+    var ticks = 0;
+    var timer = setInterval(function(){
+      els.forEach(function(el){
+        el.classList.toggle('flip', Math.random()<0.5);
+        el.style.transform = 'rotate('+(Math.random()*40-20)+'deg)';
+      });
+      playPop(300+Math.random()*200);
+      ticks++;
+      if(ticks>=7){
+        clearInterval(timer);
+        els.forEach(function(el){ el.style.transform='rotate(0deg)'; el.classList.remove('flip'); });
+        var result = weightedThrow();
+        handleResult(result);
+      }
+    }, 110);
+  }
+
+  function announceTurn(first){
+    renderStatusRow();
+    var p = game.players[game.currentIdx];
+    var banner = document.getElementById('turnBanner');
+    banner.innerHTML = '<span style="font-size:1.4rem;">'+p.animal.emoji+'</span> <b>'+p.animal.name+'팀</b> 차례예요!';
+    speak((first?'':'이제 ') + p.animal.name + '팀 차례예요! 윷을 던져주세요.');
+  }
+
+  function nextTurn(){
+    var n = game.players.length;
+    var tries=0;
+    do{
+      game.currentIdx = (game.currentIdx+1) % n;
+      tries++;
+    } while(game.players[game.currentIdx].finished && tries<=n);
+  }
+
+  async function handleResult(key){
+    var info = RESULT_INFO[key];
+    var player = game.players[game.currentIdx];
+
+    showToast(info.paws, info.label+'! '+info.steps+'칸 이동!', 1300);
+    speak(info.voice);
+    await delay(650);
+
+    var path = computePath(player.node, info.steps);
+    for(var i=0;i<path.length;i++){
+      player.node = path[i];
+      var tokenEl = document.getElementById('token-'+player.slot);
+      var pos = NODES[player.node];
+      tokenEl.style.left = pos.x+'%'; tokenEl.style.top = pos.y+'%';
+      try{ tokenEl.animate([{transform:'translate(-50%,-50%) scale(1)'},{transform:'translate(-50%,-50%) scale(1.4)'},{transform:'translate(-50%,-50%) scale(1)'}],{duration:260,easing:'ease-out'}); }catch(e){}
+      playPop(440+i*40);
+      await delay(260);
+    }
+
+    var reachedHome = player.node==='HOME';
+    var captured = null;
+    if(!reachedHome){
+      captured = game.players.find(function(p){ return p!==player && !p.finished && p.node===player.node; });
+      if(captured){
+        captured.node='START';
+      }
+    }
+
+    if(reachedHome){
+      player.finished = true;
+      game.finishedCount++;
+      player.finishRank = game.finishedCount;
+      var medal = player.finishRank===1?'🥇':player.finishRank===2?'🥈':player.finishRank===3?'🥉':'🎖️';
+      renderTrophyShelf();
+      confettiBurst(30);
+      playFanfare();
+      showToast(medal, player.animal.name+'팀 도착! '+player.finishRank+'등이에요!', 2200);
+      speak(player.animal.name+'팀이 도착했어요! '+player.finishRank+'등이에요! 축하해요!');
+      await delay(1000);
+    } else if(captured){
+      showToast('💥', player.animal.name+'팀이 '+captured.animal.name+'팀을 잡았다! 한 번 더!', 1800);
+      speak(player.animal.name+'팀이 '+captured.animal.name+'팀을 잡았어요! 한 번 더 던지세요!');
+      await delay(700);
+    }
+
+    renderTokens();
+    renderStatusRow();
+
+    var allDone = game.players.every(function(p){ return p.finished; });
+    if(allDone){
+      game.busy=false;
+      await delay(500);
+      showEndScreen();
+      return;
+    }
+
+    var extra = !reachedHome && (key==='yut' || key==='mo' || captured);
+    if(!extra){
+      nextTurn();
+      announceTurn(false);
+    } else {
+      renderStatusRow();
+      var banner = document.getElementById('turnBanner');
+      var p2 = game.players[game.currentIdx];
+      banner.innerHTML = '<span style="font-size:1.4rem;">'+p2.animal.emoji+'</span> <b>'+p2.animal.name+'팀</b> 한 번 더!';
+    }
+    renderTokens();
+    game.busy=false;
+    setControlsEnabled(true);
+  }
+
+  /* ----- 상단 버튼들 ----- */
+  document.getElementById('btnSound').addEventListener('click', function(){
+    soundOn = !soundOn;
+    this.classList.toggle('muted', !soundOn);
+    if(!soundOn && 'speechSynthesis' in window) window.speechSynthesis.cancel();
+  });
+  document.getElementById('btnModeSwitch').addEventListener('click', function(){
+    if(!game) return;
+    game.mode = game.mode==='virtual' ? 'manual' : 'virtual';
+    renderControlPanel();
+    speak(game.mode==='virtual' ? '화면에서 윷을 던질게요!' : '진짜 윷을 던지고 알려주세요!');
+  });
+  document.getElementById('btnRestart').addEventListener('click', function(){
+    if(confirm('처음부터 다시 시작할까요?')){
+      location.reload();
+    }
+  });
+
+  /* ----- 종료 화면 ----- */
+  function showEndScreen(){
+    var list = document.getElementById('rankList');
+    list.innerHTML='';
+    var ranked = game.players.slice().sort(function(a,b){ return (a.finishRank||99)-(b.finishRank||99); });
+    ranked.forEach(function(p){
+      var row = document.createElement('div');
+      row.className='rank-row';
+      var medal = p.finishRank===1?'🥇':p.finishRank===2?'🥈':p.finishRank===3?'🥉':'🎖️';
+      row.innerHTML = '<span class="medal">'+medal+'</span><span class="badge" style="--c:'+p.animal.color+'">'+p.animal.emoji+'</span><span class="nm">'+p.animal.name+'팀</span>';
+      list.appendChild(row);
+    });
+    showScreen('screen-end');
+    confettiBurst(40);
+    speak('게임이 모두 끝났어요! 다들 정말 잘했어요!');
+  }
+  document.getElementById('btnPlayAgain').addEventListener('click', function(){ location.reload(); });
+
+  /* init */
+  renderSlots();
+  updateNextBtn();
+})();
+</script>
+</body>
+</html>
