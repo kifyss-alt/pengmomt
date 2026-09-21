@@ -6,7 +6,7 @@
 <title>동물 윷놀이</title>
 <meta name="description" content="말판 이동 규칙을 몰라도 도개걸윷모만 고르면 동물 말이 저절로 움직이는 유아용 윷놀이 게임. 음성 안내와 큰 아이콘으로 글씨를 몰라도 즐길 수 있어요.">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Gaegu:wght@400;700&family=Jua&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Do+Hyeon&display=swap">
 <style>
   :root{
     --cream:#FFF7E8;
@@ -29,7 +29,7 @@
   *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
   html,body{ margin:0; min-height:100%; }
   body{
-    font-family:'Gaegu','Jua',sans-serif;
+    font-family:'Do Hyeon',sans-serif;
     color:var(--ink);
     background:
       radial-gradient(circle at 12% 18%, rgba(255,255,255,.6), transparent 40%),
@@ -39,11 +39,11 @@
     overflow-x:hidden;
     -webkit-font-smoothing:antialiased;
   }
-  h1,h2,h3{ font-family:'Jua','Black Han Sans',sans-serif; margin:0; text-wrap:balance; word-break:keep-all; }
+  h1,h2,h3{ font-family:'Do Hyeon',sans-serif; margin:0; text-wrap:balance; word-break:keep-all; }
   button{ font-family:inherit; cursor:pointer; border:none; }
   .back-link{
     position:fixed; top:10px; left:10px; z-index:9999;
-    font-family:'Gaegu',sans-serif; font-size:.85rem; font-weight:700;
+    font-family:'Do Hyeon',sans-serif; font-size:.85rem; font-weight:700;
     color:var(--ink-soft); text-decoration:none;
     background:rgba(255,255,255,.75); padding:.3rem .7rem; border-radius:999px;
     box-shadow:0 2px 6px rgba(0,0,0,.08);
@@ -74,7 +74,7 @@
   .count-row{ display:flex; gap:12px; justify-content:center; flex-wrap:wrap; }
   .count-btn{
     width:84px; height:84px; border-radius:24px; background:var(--sky);
-    font-size:2rem; font-family:'Jua',sans-serif; color:var(--sky-a-deep);
+    font-size:2rem; font-family:'Do Hyeon',sans-serif; color:var(--sky-a-deep);
     box-shadow:0 5px 0 rgba(47,161,220,.25);
     display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px;
     transition:transform .12s ease, box-shadow .12s ease;
@@ -89,7 +89,7 @@
   .slot-head{ display:flex; align-items:center; gap:8px; margin-bottom:8px; font-size:1.05rem; }
   .slot-num{
     width:30px; height:30px; border-radius:50%; background:var(--pink-a); color:#fff;
-    display:flex; align-items:center; justify-content:center; font-family:'Jua'; font-size:1rem;
+    display:flex; align-items:center; justify-content:center; font-family:'Do Hyeon'; font-size:1rem;
     flex-shrink:0;
   }
   .slot-picked{ margin-left:auto; font-size:1.6rem; }
@@ -106,7 +106,7 @@
 
   .big-btn{
     display:block; width:100%; padding:16px; border-radius:22px; font-size:1.3rem;
-    font-family:'Jua',sans-serif; color:#fff; background:var(--green-a);
+    font-family:'Do Hyeon',sans-serif; color:#fff; background:var(--green-a);
     box-shadow:0 6px 0 var(--green-a-deep);
     transition:transform .12s ease, box-shadow .12s ease;
   }
@@ -114,7 +114,7 @@
   .big-btn[disabled]{ background:#ddd !important; box-shadow:0 6px 0 #bbb !important; color:#fff; opacity:.7; pointer-events:none; }
   .ghost-btn{
     display:block; width:100%; padding:10px; border-radius:18px; font-size:1rem;
-    background:transparent; color:var(--ink-soft); text-align:center; font-family:'Gaegu';
+    background:transparent; color:var(--ink-soft); text-align:center; font-family:'Do Hyeon';
   }
 
   .mode-cards{ display:flex; flex-direction:column; gap:14px; }
@@ -163,11 +163,17 @@
   .board-lines line{ stroke:#E3B168; stroke-width:1.6; stroke-linecap:round; }
   .dot{
     position:absolute; width:5.6%; height:5.6%; border-radius:50%;
-    background:#fff; border:2px solid #E3B168; transform:translate(-50%,-50%);
+    background:#FFFBF0; border:2px solid #E3B168; transform:translate(-50%,-50%);
   }
-  .dot.corner{ width:9.5%; height:9.5%; background:#FFE1AE; border-color:#E0973F; }
-  .dot.center{ width:11%; height:11%; background:linear-gradient(135deg,#FFD9EC,#D8F1FF); border-color:var(--pink-a-deep); display:flex; align-items:center; justify-content:center; font-size:1rem; }
-  .dot.home{ width:13%; height:13%; background:linear-gradient(135deg,#FFEFC0,#FFD9EC); border:3px solid var(--yellow-a-deep); display:flex; align-items:center; justify-content:center; font-size:1.3rem; }
+  .dot.corner, .dot.center, .dot.home{
+    border:none; border-radius:50%; transform:translate(-50%,-50%);
+    display:flex; align-items:center; justify-content:center; text-align:center; line-height:1.1;
+    font-family:'Do Hyeon'; color:#7A4E00;
+    background:radial-gradient(circle, #FFFBF0 0 54%, var(--ring,#E0973F) 54% 68%, #FFFBF0 68% 82%, var(--ring,#E0973F) 82% 100%);
+  }
+  .dot.corner{ width:10%; height:10%; --ring:#E0973F; }
+  .dot.center{ width:10%; height:10%; --ring:var(--pink-a-deep); }
+  .dot.home{ width:15%; height:15%; --ring:var(--yellow-a-deep); font-size:.7rem; }
 
   .token{
     position:absolute; width:11%; height:11%; border-radius:50%;
@@ -202,7 +208,7 @@
   .result-btn{
     background:var(--sky); border-radius:16px; padding:10px 2px; display:flex; flex-direction:column;
     align-items:center; gap:2px; box-shadow:0 5px 0 var(--sky-a-deep); color:var(--sky-a-deep);
-    font-family:'Jua'; font-size:.95rem;
+    font-family:'Do Hyeon'; font-size:.95rem;
   }
   .result-btn .paws{ font-size:.85rem; letter-spacing:-2px; }
   .result-btn:active{ transform:translateY(4px); box-shadow:0 1px 0 var(--sky-a-deep); }
@@ -370,21 +376,23 @@
       NODES[id] = {x:lerp(p0.x,p1.x,t), y:lerp(p0.y,p1.y,t), type:'diag'};
     });
   }
-  var HOME_POS={x:50,y:95}, RIGHT={x:95,y:50}, TOP={x:50,y:5}, LEFT={x:5,y:50}, CENTER={x:50,y:50};
-  NODES.START = {x:HOME_POS.x, y:HOME_POS.y, type:'home'};
-  NODES.HOME  = {x:HOME_POS.x, y:HOME_POS.y, type:'home'};
-  NODES.O5  = {x:RIGHT.x, y:RIGHT.y, type:'corner'};
-  NODES.O10 = {x:TOP.x,   y:TOP.y,   type:'corner'};
-  NODES.O15 = {x:LEFT.x,  y:LEFT.y,  type:'corner'};
+  /* 정사각형 고전 윷판: 출발(오른쪽 아래)에서 시계 반대 방향으로 한 바퀴,
+     대각선은 왼쪽아래-오른쪽위, 왼쪽위-출발(오른쪽아래)을 중앙에서 가로지른다. */
+  var BR={x:88,y:88}, BL={x:12,y:88}, TL={x:12,y:12}, TR={x:88,y:12}, CENTER={x:50,y:50};
+  NODES.START = {x:BR.x, y:BR.y, type:'home'};
+  NODES.HOME  = {x:BR.x, y:BR.y, type:'home'};
+  NODES.O5  = {x:BL.x, y:BL.y, type:'corner'};
+  NODES.O10 = {x:TL.x, y:TL.y, type:'corner'};
+  NODES.O15 = {x:TR.x, y:TR.y, type:'corner'};
   NODES.C   = {x:CENTER.x,y:CENTER.y,type:'center'};
-  edgePts(HOME_POS, RIGHT, ['O1','O2','O3','O4']);
-  edgePts(RIGHT, TOP,      ['O6','O7','O8','O9']);
-  edgePts(TOP, LEFT,       ['O11','O12','O13','O14']);
-  edgePts(LEFT, HOME_POS,  ['O16','O17','O18','O19']);
-  diagPts(RIGHT, CENTER,   ['a1','a2']);
-  diagPts(CENTER, LEFT,    ['a3','a4']);
-  diagPts(TOP, CENTER,     ['b1','b2']);
-  diagPts(CENTER, HOME_POS,['b3','b4']);
+  edgePts(BR, BL, ['O1','O2','O3','O4']);
+  edgePts(BL, TL, ['O6','O7','O8','O9']);
+  edgePts(TL, TR, ['O11','O12','O13','O14']);
+  edgePts(TR, BR, ['O16','O17','O18','O19']);
+  diagPts(BL, CENTER, ['a1','a2']);
+  diagPts(CENTER, TR,  ['a3','a4']);
+  diagPts(TL, CENTER,  ['b1','b2']);
+  diagPts(CENTER, BR,  ['b3','b4']);
 
   var NEXT = {
     START:'O1',
@@ -655,8 +663,7 @@
       var d = document.createElement('div');
       d.className = 'dot' + (n.type==='corner' ? ' corner' : n.type==='center' ? ' center' : n.type==='home' ? ' home' : '');
       d.style.left = n.x+'%'; d.style.top = n.y+'%';
-      if(n.type==='center') d.textContent='✨';
-      if(n.type==='home') d.textContent='🏁';
+      if(n.type==='home') d.textContent='출발';
       boardEl.appendChild(d);
     });
 
