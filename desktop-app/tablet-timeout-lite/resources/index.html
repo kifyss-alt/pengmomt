@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>태블릿 사용 타임아웃 게시판</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=Gowun+Dodum&display=swap">
+<style>
+  :root{
+    --primary:#2563eb;
+    --primary-dark:#1d4ed8;
+    --bg-main:#f3f6fb;
+    --bg-card:#ffffff;
+    --text-main:#0f172a;
+    --text-soft:#64748b;
+    --border:#e2e8f0;
+    --track:#e6ebf3;
+    --red:#ef4444;
+    --amber:#f59e0b;
+    --radius-lg:20px;
+    --radius-md:14px;
+  }
+  *{box-sizing:border-box;}
+  html,body{height:100%;}
+  body{
+    margin:0;
+    background:var(--bg-main);
+    color:var(--text-main);
+    font-family:'Gowun Dodum','Malgun Gothic',sans-serif;
+    -webkit-tap-highlight-color:transparent;
+    word-break:keep-all;
+    -webkit-user-select:none;
+    user-select:none;
+  }
+  h1,h2{
+    font-family:'Gowun Batang',serif;
+    text-wrap:balance;
+  }
+
+  .top-bar{
+    display:flex;
+    flex-wrap:wrap;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+    padding:16px clamp(16px,4vw,40px);
+    max-width:1400px;
+    margin:0 auto;
+  }
+  .title-group h1{
+    font-size:clamp(1.15rem,2.4vw,1.6rem);
+    margin:0 0 4px;
+    display:flex; align-items:center; gap:8px;
+  }
+  .title-group .subtitle{
+    margin:0;
+    font-size:.86rem;
+    color:var(--text-soft);
+  }
+  .top-bar-right{
+    display:flex; align-items:center; gap:8px; flex-wrap:wrap;
+  }
+  .today-badge{
+    background:#fff;
+    border:1px solid var(--border);
+    border-radius:999px;
+    padding:.5rem 1rem;
+    font-size:.85rem;
+    color:var(--text-soft);
+    box-shadow:0 1px 3px rgba(15,23,42,.05);
+  }
+  .icon-btn{
+    border:1px solid var(--border);
+    background:#fff;
+    border-radius:999px;
+    padding:.5rem 1rem;
+    font-size:.85rem;
+    color:var(--text-main);
+    cursor:pointer;
+    display:inline-flex; align-items:center; gap:6px;
+    transition:background .15s ease, transform .1s ease, border-color .15s ease, color .15s ease;
+  }
+  .icon-btn:hover{ background:#eff6ff; }
+  .icon-btn:active{ transform:scale(.96); }
+  .icon-btn.pinned{ background:var(--primary); color:#fff; border-color:var(--primary); }
+  .icon-btn[hidden]{ display:none; }
+
+  .board{
+    display:grid;
+    grid-template-columns:repeat(auto-fill,minmax(150px,1fr));
+    gap:16px;
+    padding:8px clamp(16px,4vw,40px) 40px;
+    max-width:1400px;
+    margin:0 auto;
+  }
+
+  .kid-card{
+    background:var(--bg-card);
+    border:2px solid var(--border);
+    border-radius:var(--radius-lg);
+    padding:16px 10px 14px;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:10px;
+    transition:border-color .25s ease, background .25s ease, box-shadow .25s ease;
+  }
+  .kid-card.running{ border-color:var(--red); }
+  .kid-card.warn{ border-color:var(--amber); background:#fffbeb; }
+  .kid-card.ended{
+    border-color:var(--red);
+    background:#fef2f2;
+    animation:pulseAlert 1.1s ease-in-out infinite;
+  }
+  @keyframes pulseAlert{
+    0%,100%{ box-shadow:0 0 0 0 rgba(239,68,68,.45); }
+    50%{ box-shadow:0 0 0 9px rgba(239,68,68,0); }
+  }
+
+  .dial-wrap{ position:relative; width:88px; height:88px; }
+  .dial{
+    width:100%; height:100%; border-radius:50%;
+    background:conic-gradient(from -90deg, var(--dial-red,var(--red)) 0deg var(--angle,0deg), var(--track) var(--angle,0deg) 360deg);
+    box-shadow:inset 0 0 0 5px #fff, 0 1px 4px rgba(15,23,42,.12);
+    display:flex; align-items:center; justify-content:center;
+  }
+  .kid-card.running .dial{ --dial-red:var(--red); }
+  .kid-card.warn .dial{ --dial-red:var(--amber); }
+  .dial-face{
+    width:64%; height:64%; border-radius:50%;
+    background:#fff;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    gap:1px;
+  }
+  .dial-time{
+    font-weight:700; font-size:.86rem; letter-spacing:.02em;
+    font-variant-numeric:tabular-nums;
+    font-family:'Gowun Dodum',sans-serif;
+  }
+  .dial-icon{ font-size:1.05rem; line-height:1; }
+  .kid-card.ended .dial-face .dial-time{ display:none; }
+  .kid-card.ended .dial-face .dial-icon::after{ content:'⏰'; }
+  .kid-card:not(.ended) .dial-face .dial-icon.end-icon{ display:none; }
+
+  .kid-name{
+    font-size:clamp(1rem,1.6vw,1.15rem);
+    font-weight:700;
+    text-align:center;
+  }
+  .status-text{
+    font-size:.72rem;
+    color:var(--text-soft);
+    margin-top:-6px;
+    min-height:1em;
+  }
+  .kid-card.running .status-text{ color:var(--red); }
+  .kid-card.warn .status-text{ color:var(--amber); font-weight:700; }
+  .kid-card.ended .status-text{ color:var(--red); font-weight:700; }
+
+  .action-btn{
+    width:100%;
+    border-radius:999px;
+    padding:.5rem 0;
+    font-size:.85rem;
+    font-weight:700;
+    cursor:pointer;
+    border:2px solid transparent;
+    transition:transform .1s ease, filter .15s ease;
+  }
+  .action-btn:active{ transform:scale(.96); }
+  .action-btn.start{ background:var(--primary); color:#fff; }
+  .action-btn.start:hover{ filter:brightness(1.08); }
+  .action-btn.stop{ background:#fff; color:var(--red); border-color:var(--red); }
+  .action-btn.stop:hover{ background:#fef2f2; }
+  .action-btn.ack{ background:var(--red); color:#fff; }
+  .action-btn.ack:hover{ filter:brightness(1.08); }
+
+  .legend{
+    max-width:1400px;
+    margin:0 auto;
+    padding:0 clamp(16px,4vw,40px) 32px;
+    display:flex;
+    flex-wrap:wrap;
+    gap:16px;
+    font-size:.78rem;
+    color:var(--text-soft);
+  }
+  .legend span{ display:inline-flex; align-items:center; gap:6px; }
+  .dot{ width:11px; height:11px; border-radius:50%; display:inline-block; }
+  .dot.idle{ background:var(--track); border:1px solid var(--border); }
+  .dot.running{ background:var(--red); }
+  .dot.warn{ background:var(--amber); }
+  .dot.done{ background:var(--red); box-shadow:0 0 0 3px rgba(239,68,68,.25); }
+
+  @media (max-width:480px){
+    .board{ grid-template-columns:repeat(auto-fill,minmax(120px,1fr)); gap:10px; }
+    .dial-wrap{ width:72px; height:72px; }
+  }
+</style>
+</head>
+<body>
+
+<header class="top-bar">
+  <div class="title-group">
+    <h1>📱 태블릿 사용 타임아웃 게시판</h1>
+    <p class="subtitle">이름을 누르면 그 위에 30분 시각 타이머가 시작돼요. 자정이 지나면 자동으로 초기화됩니다.</p>
+  </div>
+  <div class="top-bar-right">
+    <span class="today-badge" id="todayBadge"></span>
+    <button class="icon-btn" id="pinBtn" type="button" hidden>📌 항상 위 고정</button>
+    <button class="icon-btn" id="muteBtn" type="button">🔔 소리 켜짐</button>
+    <button class="icon-btn" id="resetAllBtn" type="button">↺ 전체 초기화</button>
+  </div>
+</header>
+
+<main class="board" id="board"></main>
+
+<footer class="legend">
+  <span><i class="dot idle"></i>대기중 · 눌러서 시작</span>
+  <span><i class="dot running"></i>사용중 (30분 카운트다운)</span>
+  <span><i class="dot warn"></i>5분 이하 남음</span>
+  <span><i class="dot done"></i>시간 종료 · 확인을 눌러주세요</span>
+</footer>
+
+<script src="/js/neutralino.js"></script>
+<script>
+(function(){
+  "use strict";
+
+  var KIDS = [
+    "강우주","권소담","김예린","남소윤","송시우","송예은","오윤정","이서환",
+    "이지호","이혜연","임이든","장우진","전도준","전소영","지한겸","정아윤",
+    "하소율","장다미"
+  ];
+
+  var STORAGE_KEY = "pengmam_tablet_timeout_v1";
+  var MUTE_KEY = "pengmam_tablet_timeout_muted";
+  var DURATION_MS = 30 * 60 * 1000;
+  var WARN_MS = 5 * 60 * 1000;
+
+  function todayStr(d){
+    d = d || new Date();
+    var y = d.getFullYear();
+    var m = String(d.getMonth() + 1).padStart(2, "0");
+    var day = String(d.getDate()).padStart(2, "0");
+    return y + "-" + m + "-" + day;
+  }
+
+  function loadState(){
+    var raw = null;
+    try{ raw = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null"); }catch(e){ raw = null; }
+    var today = todayStr();
+    if(!raw || raw.date !== today || typeof raw.sessions !== "object"){
+      raw = { date: today, sessions: {} };
+      saveState(raw);
+    }
+    return raw;
+  }
+  function saveState(s){
+    try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(s)); }catch(e){}
+  }
+
+  var state = loadState();
+  var alertedNames = {};
+  var muted = localStorage.getItem(MUTE_KEY) === "1";
+  var audioCtx = null;
+
+  function getAudioCtx(){
+    if(!audioCtx){
+      var Ctx = window.AudioContext || window.webkitAudioContext;
+      if(!Ctx) return null;
+      audioCtx = new Ctx();
+    }
+    if(audioCtx.state === "suspended"){ audioCtx.resume(); }
+    return audioCtx;
+  }
+
+  function playChime(){
+    if(muted) return;
+    var ctx = getAudioCtx();
+    if(!ctx) return;
+    try{
+      var now = ctx.currentTime;
+      [0, 0.2, 0.4].forEach(function(t, i){
+        var o = ctx.createOscillator();
+        var g = ctx.createGain();
+        o.type = "sine";
+        o.frequency.value = i === 2 ? 1046.5 : 880;
+        g.gain.setValueAtTime(0.0001, now + t);
+        g.gain.exponentialRampToValueAtTime(0.22, now + t + 0.02);
+        g.gain.exponentialRampToValueAtTime(0.0001, now + t + 0.18);
+        o.connect(g); g.connect(ctx.destination);
+        o.start(now + t); o.stop(now + t + 0.2);
+      });
+    }catch(e){}
+  }
+
+  function fmt(ms){
+    var totalSec = Math.max(0, Math.ceil(ms / 1000));
+    var m = String(Math.floor(totalSec / 60)).padStart(2, "0");
+    var s = String(totalSec % 60).padStart(2, "0");
+    return m + ":" + s;
+  }
+
+  function computeStatus(name){
+    var session = state.sessions[name];
+    if(!session) return { status: "idle", remaining: DURATION_MS };
+    var remaining = DURATION_MS - (Date.now() - session.startedAt);
+    if(remaining <= 0) return { status: "ended", remaining: 0 };
+    if(remaining <= WARN_MS) return { status: "warn", remaining: remaining };
+    return { status: "running", remaining: remaining };
+  }
+
+  function startTimer(name){
+    getAudioCtx();
+    state.sessions[name] = { startedAt: Date.now() };
+    delete alertedNames[name];
+    saveState(state);
+    updateCard(name);
+  }
+  function stopTimer(name){
+    if(!confirm(name + " 어린이의 타이머를 정지할까요?")) return;
+    delete state.sessions[name];
+    delete alertedNames[name];
+    saveState(state);
+    updateCard(name);
+  }
+  function ackTimer(name){
+    delete state.sessions[name];
+    delete alertedNames[name];
+    saveState(state);
+    updateCard(name);
+  }
+
+  var board = document.getElementById("board");
+  var cardRefs = {};
+
+  function buildBoard(){
+    var frag = document.createDocumentFragment();
+    KIDS.forEach(function(name){
+      var card = document.createElement("div");
+      card.className = "kid-card idle";
+
+      var dialWrap = document.createElement("div");
+      dialWrap.className = "dial-wrap";
+      var dial = document.createElement("div");
+      dial.className = "dial";
+      dial.style.setProperty("--angle", "0deg");
+      var face = document.createElement("div");
+      face.className = "dial-face";
+      var timeEl = document.createElement("span");
+      timeEl.className = "dial-time";
+      timeEl.textContent = "30:00";
+      var iconEl = document.createElement("span");
+      iconEl.className = "dial-icon";
+      iconEl.textContent = "📱";
+      face.appendChild(timeEl);
+      face.appendChild(iconEl);
+      dial.appendChild(face);
+      dialWrap.appendChild(dial);
+
+      var nameEl = document.createElement("div");
+      nameEl.className = "kid-name";
+      nameEl.textContent = name;
+
+      var statusEl = document.createElement("div");
+      statusEl.className = "status-text";
+      statusEl.textContent = "";
+
+      var btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "action-btn start";
+      btn.textContent = "▶ 시작";
+
+      card.appendChild(dialWrap);
+      card.appendChild(nameEl);
+      card.appendChild(statusEl);
+      card.appendChild(btn);
+      frag.appendChild(card);
+
+      cardRefs[name] = { card: card, dial: dial, timeEl: timeEl, iconEl: iconEl, statusEl: statusEl, btn: btn };
+    });
+    board.appendChild(frag);
+  }
+
+  function updateCard(name){
+    var ref = cardRefs[name];
+    var r = computeStatus(name);
+    ref.card.classList.remove("idle", "running", "warn", "ended");
+    ref.card.classList.add(r.status);
+
+    if(r.status === "idle"){
+      ref.timeEl.textContent = "30:00";
+      ref.iconEl.textContent = "📱";
+      ref.statusEl.textContent = "";
+      ref.dial.style.setProperty("--angle", "0deg");
+      ref.btn.className = "action-btn start";
+      ref.btn.textContent = "▶ 시작";
+      ref.btn.onclick = function(){ startTimer(name); };
+    } else if(r.status === "running" || r.status === "warn"){
+      ref.timeEl.textContent = fmt(r.remaining);
+      ref.iconEl.textContent = "📱";
+      ref.statusEl.textContent = r.status === "warn" ? "곧 시간 종료!" : "사용중";
+      var angle = (r.remaining / DURATION_MS) * 360;
+      ref.dial.style.setProperty("--angle", angle.toFixed(2) + "deg");
+      ref.btn.className = "action-btn stop";
+      ref.btn.textContent = "■ 정지";
+      ref.btn.onclick = function(){ stopTimer(name); };
+    } else {
+      ref.timeEl.textContent = "00:00";
+      ref.iconEl.textContent = "⏰";
+      ref.statusEl.textContent = "시간 종료!";
+      ref.dial.style.setProperty("--angle", "0deg");
+      ref.btn.className = "action-btn ack";
+      ref.btn.textContent = "✔ 확인";
+      ref.btn.onclick = function(){ ackTimer(name); };
+      if(!alertedNames[name]){
+        alertedNames[name] = true;
+        playChime();
+      }
+    }
+  }
+
+  function updateAll(){
+    KIDS.forEach(updateCard);
+  }
+
+  function checkRollover(){
+    var today = todayStr();
+    if(state.date !== today){
+      state = { date: today, sessions: {} };
+      alertedNames = {};
+      saveState(state);
+      updateAll();
+      updateTodayBadge();
+    }
+  }
+
+  var todayBadge = document.getElementById("todayBadge");
+  function updateTodayBadge(){
+    var d = new Date();
+    todayBadge.textContent = d.toLocaleDateString("ko-KR", { month: "long", day: "numeric", weekday: "long" });
+  }
+
+  var muteBtn = document.getElementById("muteBtn");
+  function renderMuteBtn(){
+    muteBtn.textContent = muted ? "🔕 소리 꺼짐" : "🔔 소리 켜짐";
+  }
+  muteBtn.addEventListener("click", function(){
+    getAudioCtx();
+    muted = !muted;
+    localStorage.setItem(MUTE_KEY, muted ? "1" : "0");
+    renderMuteBtn();
+  });
+
+  document.getElementById("resetAllBtn").addEventListener("click", function(){
+    if(!confirm("모든 어린이의 타이머를 초기화할까요?")) return;
+    state.sessions = {};
+    alertedNames = {};
+    saveState(state);
+    updateAll();
+  });
+
+  buildBoard();
+  updateAll();
+  updateTodayBadge();
+  renderMuteBtn();
+
+  setInterval(function(){
+    checkRollover();
+    updateAll();
+  }, 1000);
+
+  // ---- 데스크톱 앱(Neutralino) 전용 기능: 항상 위 고정, 트레이 ----
+  if(window.Neutralino){
+    Neutralino.init();
+
+    var pinned = false;
+    var isQuitting = false;
+    var pinBtn = document.getElementById("pinBtn");
+    pinBtn.hidden = false;
+
+    function setPinned(next){
+      pinned = next;
+      Neutralino.window.setAlwaysOnTop(pinned);
+      pinBtn.classList.toggle("pinned", pinned);
+      pinBtn.textContent = pinned ? "📌 고정됨" : "📌 항상 위 고정";
+      setupTray();
+    }
+    pinBtn.addEventListener("click", function(){ setPinned(!pinned); });
+
+    function setupTray(){
+      Neutralino.os.setTray({
+        icon: "/icon.png",
+        menuItems: [
+          { id: "open", text: "열기" },
+          { id: "pin", text: (pinned ? "✔ " : "") + "항상 위 고정" },
+          { id: "sep", text: "-" },
+          { id: "quit", text: "종료" }
+        ]
+      }).catch(function(){ /* 트레이를 지원하지 않는 환경이면 무시 */ });
+    }
+
+    Neutralino.events.on("trayMenuItemClicked", function(evt){
+      var id = evt.detail.id;
+      if(id === "open"){
+        Neutralino.window.show();
+        Neutralino.window.focus();
+      } else if(id === "pin"){
+        setPinned(!pinned);
+      } else if(id === "quit"){
+        isQuitting = true;
+        Neutralino.app.exit();
+      }
+    });
+
+    Neutralino.events.on("windowClose", function(){
+      if(isQuitting){
+        Neutralino.app.exit();
+      } else {
+        Neutralino.window.hide();
+      }
+    });
+
+    setupTray();
+  }
+
+})();
+</script>
+
+</body>
+</html>

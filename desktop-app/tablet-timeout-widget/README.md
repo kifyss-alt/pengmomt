@@ -4,6 +4,10 @@
 Electron으로 감싼 것으로, 내용(이름 목록·30분 타이머 로직)은
 `games/tablet-timeout/index.html`과 동일합니다.
 
+> 실행 파일 용량이 커도 괜찮다면(약 80MB) 이 버전을 쓰세요. 용량이 작은
+> 버전(약 2.6MB)이 필요하면 `desktop-app/tablet-timeout-lite`(Neutralinojs
+> 버전)를 사용하세요. 기능과 화면은 동일합니다.
+
 ## 사용자 기능
 
 - 일반 프로그램 창처럼 최소화 / 최대화 / 닫기 버튼 사용 가능

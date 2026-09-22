@@ -1,0 +1,47 @@
+{
+  "$schema": "https://raw.githubusercontent.com/neutralinojs/neutralinojs/main/schemas/neutralino.config.schema.json",
+  "applicationId": "com.pengmam.tablettimeoutwidget",
+  "version": "1.0.0",
+  "defaultMode": "window",
+  "port": 32891,
+  "documentRoot": "/resources/",
+  "url": "/",
+  "enableServer": true,
+  "enableNativeAPI": true,
+  "tokenSecurity": "one-time",
+  "logging": {
+    "enabled": true,
+    "writeToLogFile": false
+  },
+  "nativeAllowList": [
+    "app.*",
+    "os.*",
+    "window.*",
+    "events.*",
+    "debug.log"
+  ],
+  "modes": {
+    "window": {
+      "title": "태블릿 사용 타임아웃 게시판",
+      "width": 1040,
+      "height": 800,
+      "minWidth": 480,
+      "minHeight": 420,
+      "icon": "/resources/icon.png",
+      "enableInspector": false,
+      "borderless": false,
+      "maximizable": true,
+      "hidden": false,
+      "resizable": true,
+      "exitProcessOnClose": false
+    }
+  },
+  "cli": {
+    "binaryName": "tablet-timeout-widget",
+    "resourcesPath": "/resources/",
+    "extensionsPath": "/extensions/",
+    "clientLibrary": "/resources/js/neutralino.js",
+    "binaryVersion": "6.3.0",
+    "clientVersion": "6.3.0"
+  }
+}
