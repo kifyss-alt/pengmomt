@@ -236,6 +236,95 @@
     .board{ grid-template-columns:repeat(auto-fill,minmax(120px,1fr)); gap:10px; }
     .dial-wrap{ width:72px; height:72px; }
   }
+
+  .alarm-overlay{
+    position:fixed; inset:0; z-index:200;
+    background:rgba(15,23,42,.6);
+    display:flex; align-items:center; justify-content:center;
+    padding:20px;
+  }
+  .alarm-overlay[hidden]{ display:none; }
+  .alarm-card{
+    background:#fff;
+    border-radius:28px;
+    padding:32px 28px;
+    max-width:420px;
+    width:100%;
+    text-align:center;
+    box-shadow:0 20px 60px rgba(0,0,0,.4);
+    border:4px solid var(--red);
+    animation:alarmPop .35s cubic-bezier(.34,1.56,.64,1), alarmPulse 1.1s ease-in-out infinite .35s;
+  }
+  @keyframes alarmPop{
+    0%{ transform:scale(.85); opacity:0; }
+    100%{ transform:scale(1); opacity:1; }
+  }
+  @keyframes alarmPulse{
+    0%,100%{ box-shadow:0 20px 60px rgba(0,0,0,.4), 0 0 0 0 rgba(239,68,68,.5); }
+    50%{ box-shadow:0 20px 60px rgba(0,0,0,.4), 0 0 0 14px rgba(239,68,68,0); }
+  }
+  .alarm-icon{
+    font-size:4rem;
+    line-height:1;
+    display:inline-block;
+    animation:alarmShake 1s ease-in-out infinite;
+  }
+  @keyframes alarmShake{
+    0%,100%{ transform:rotate(0deg); }
+    20%{ transform:rotate(-12deg); }
+    40%{ transform:rotate(10deg); }
+    60%{ transform:rotate(-8deg); }
+    80%{ transform:rotate(6deg); }
+  }
+  .alarm-title{
+    font-family:'Gowun Batang',serif;
+    font-size:1.5rem;
+    color:var(--red);
+    margin:10px 0 18px;
+  }
+  .alarm-list{
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+    max-height:240px;
+    overflow-y:auto;
+    margin-bottom:18px;
+  }
+  .alarm-item{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    background:#fef2f2;
+    border:2px solid var(--red);
+    border-radius:14px;
+    padding:10px 14px;
+  }
+  .alarm-item-name{
+    font-weight:700;
+    font-size:1.1rem;
+  }
+  .alarm-item-btn{
+    border:none;
+    background:var(--red);
+    color:#fff;
+    font-weight:700;
+    padding:.4rem 1rem;
+    border-radius:999px;
+    cursor:pointer;
+  }
+  .alarm-item-btn:hover{ filter:brightness(1.1); }
+  .alarm-ack-all{
+    width:100%;
+    border:none;
+    background:var(--primary);
+    color:#fff;
+    font-weight:700;
+    font-size:1rem;
+    padding:.7rem 0;
+    border-radius:999px;
+    cursor:pointer;
+  }
+  .alarm-ack-all:hover{ filter:brightness(1.08); }
 </style>
 </head>
 <body>
@@ -267,6 +356,15 @@
   <span><i class="dot done"></i>시간 종료 · 확인을 눌러주세요</span>
   <span><i class="dot exhausted"></i>오늘(오전/오후) 사용 시간 다 씀</span>
 </footer>
+
+<div class="alarm-overlay" id="alarmOverlay" hidden>
+  <div class="alarm-card">
+    <span class="alarm-icon">⏰</span>
+    <h2 class="alarm-title">시간이 다 되었어요!</h2>
+    <div class="alarm-list" id="alarmList"></div>
+    <button class="alarm-ack-all" id="alarmAckAll" type="button">전체 확인</button>
+  </div>
+</div>
 
 <script>
 (function(){
@@ -306,10 +404,10 @@
   }
 
   var state = loadState();
-  var alertedKeys = {};
   var muted = localStorage.getItem(MUTE_KEY) === "1";
   var audioCtx = null;
   var selectedPeriod = (new Date().getHours() < 12) ? "am" : "pm";
+  var alarmRepeatTimer = null;
 
   function getAudioCtx(){
     if(!audioCtx){
@@ -321,22 +419,24 @@
     return audioCtx;
   }
 
-  function playChime(){
+  function playAlarmLoud(){
     if(muted) return;
     var ctx = getAudioCtx();
     if(!ctx) return;
     try{
       var now = ctx.currentTime;
-      [0, 0.2, 0.4].forEach(function(t, i){
+      var pattern = [880, 660, 880, 660, 1046.5];
+      pattern.forEach(function(freq, i){
+        var t = i * 0.25;
         var o = ctx.createOscillator();
         var g = ctx.createGain();
-        o.type = "sine";
-        o.frequency.value = i === 2 ? 1046.5 : 880;
+        o.type = "square";
+        o.frequency.value = freq;
         g.gain.setValueAtTime(0.0001, now + t);
-        g.gain.exponentialRampToValueAtTime(0.22, now + t + 0.02);
-        g.gain.exponentialRampToValueAtTime(0.0001, now + t + 0.18);
+        g.gain.exponentialRampToValueAtTime(0.5, now + t + 0.03);
+        g.gain.exponentialRampToValueAtTime(0.0001, now + t + 0.22);
         o.connect(g); g.connect(ctx.destination);
-        o.start(now + t); o.stop(now + t + 0.2);
+        o.start(now + t); o.stop(now + t + 0.24);
       });
     }catch(e){}
   }
@@ -389,7 +489,7 @@
     pd.startedAt = Date.now();
     pd.ended = false;
     saveState(state);
-    updateCard(name);
+    refreshBoard();
   }
   function stopTimer(name){
     var pd = getPeriodState(name, selectedPeriod);
@@ -399,14 +499,13 @@
       pd.startedAt = null;
     }
     saveState(state);
-    updateCard(name);
+    refreshBoard();
   }
   function ackTimer(name){
     var pd = getPeriodState(name, selectedPeriod);
     pd.ended = false;
     saveState(state);
-    delete alertedKeys[name + "|" + selectedPeriod];
-    updateCard(name);
+    refreshBoard();
   }
 
   var board = document.getElementById("board");
@@ -504,11 +603,6 @@
       ref.btn.textContent = "✔ 확인";
       ref.btn.disabled = false;
       ref.btn.onclick = function(){ ackTimer(name); };
-      var key = name + "|" + selectedPeriod;
-      if(!alertedKeys[key]){
-        alertedKeys[key] = true;
-        playChime();
-      }
     }
   }
 
@@ -516,13 +610,63 @@
     KIDS.forEach(updateCard);
   }
 
+  function computeEndedQueue(){
+    return KIDS.filter(function(name){
+      return evalPeriod(name, selectedPeriod).status === "ended";
+    });
+  }
+
+  var alarmOverlay = document.getElementById("alarmOverlay");
+  var alarmList = document.getElementById("alarmList");
+
+  function renderAlarmModal(){
+    var ended = computeEndedQueue();
+    if(ended.length === 0){
+      alarmOverlay.hidden = true;
+      if(alarmRepeatTimer){ clearInterval(alarmRepeatTimer); alarmRepeatTimer = null; }
+      return;
+    }
+    alarmOverlay.hidden = false;
+    alarmList.innerHTML = "";
+    ended.forEach(function(name){
+      var row = document.createElement("div");
+      row.className = "alarm-item";
+      var nm = document.createElement("span");
+      nm.className = "alarm-item-name";
+      nm.textContent = name;
+      var btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "alarm-item-btn";
+      btn.textContent = "확인";
+      btn.addEventListener("click", function(){ ackTimer(name); });
+      row.appendChild(nm);
+      row.appendChild(btn);
+      alarmList.appendChild(row);
+    });
+    if(!alarmRepeatTimer){
+      playAlarmLoud();
+      alarmRepeatTimer = setInterval(playAlarmLoud, 2500);
+    }
+  }
+
+  document.getElementById("alarmAckAll").addEventListener("click", function(){
+    computeEndedQueue().forEach(function(name){
+      getPeriodState(name, selectedPeriod).ended = false;
+    });
+    saveState(state);
+    refreshBoard();
+  });
+
+  function refreshBoard(){
+    updateAll();
+    renderAlarmModal();
+  }
+
   function checkRollover(){
     var today = todayStr();
     if(state.date !== today){
       state = { date: today, sessions: {} };
-      alertedKeys = {};
       saveState(state);
-      updateAll();
       updateTodayBadge();
     }
   }
@@ -545,7 +689,7 @@
     if(!btn) return;
     selectedPeriod = btn.getAttribute("data-period");
     renderPeriodToggle();
-    updateAll();
+    refreshBoard();
   });
 
   var muteBtn = document.getElementById("muteBtn");
@@ -562,20 +706,19 @@
   document.getElementById("resetAllBtn").addEventListener("click", function(){
     if(!confirm("모든 어린이의 오전/오후 사용 시간을 초기화할까요?")) return;
     state.sessions = {};
-    alertedKeys = {};
     saveState(state);
-    updateAll();
+    refreshBoard();
   });
 
   buildBoard();
   renderPeriodToggle();
-  updateAll();
+  refreshBoard();
   updateTodayBadge();
   renderMuteBtn();
 
   setInterval(function(){
     checkRollover();
-    updateAll();
+    refreshBoard();
   }, 1000);
 
 })();
