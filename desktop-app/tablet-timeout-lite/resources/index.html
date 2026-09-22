@@ -319,7 +319,6 @@
     updateCard(name);
   }
   function stopTimer(name){
-    if(!confirm(name + " 어린이의 타이머를 정지할까요?")) return;
     delete state.sessions[name];
     delete alertedNames[name];
     saveState(state);
