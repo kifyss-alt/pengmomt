@@ -841,36 +841,51 @@
     var els = [0,1,2,3].map(function(i){ return document.getElementById('stick'+i); });
     var ticks = 0;
     var timer = setInterval(function(){
-      els.forEach(function(el){
-        el.classList.toggle('flip', Math.random()<0.5);
-        el.style.transform = 'rotate('+(Math.random()*40-20)+'deg)';
-      });
-      playPop(300+Math.random()*200);
-      ticks++;
-      if(ticks>=9){
-        clearInterval(timer);
-        var flips = [0,1,2,3].map(function(){ return Math.random()<0.55; });
-        els.forEach(function(el,i){
-          el.style.transform='rotate(0deg)';
-          el.classList.toggle('flip', flips[i]);
+      try{
+        els.forEach(function(el){
+          if(!el) return;
+          el.classList.toggle('flip', Math.random()<0.5);
+          el.style.transform = 'rotate('+(Math.random()*40-20)+'deg)';
         });
-        playPop(560);
-        var flipCount = flips.filter(Boolean).length;
-        revealVirtualResult(flipCount);
+        playPop(300+Math.random()*200);
+        ticks++;
+        if(ticks>=9){
+          clearInterval(timer);
+          var flips = [0,1,2,3].map(function(){ return Math.random()<0.55; });
+          els.forEach(function(el,i){
+            if(!el) return;
+            el.style.transform='rotate(0deg)';
+            el.classList.toggle('flip', flips[i]);
+          });
+          playPop(560);
+          var flipCount = flips.filter(Boolean).length;
+          revealVirtualResult(flipCount);
+        }
+      } catch(e){
+        console.error('윷 던지기 애니메이션 중 오류:', e);
+        clearInterval(timer);
+        game.busy = false;
+        setControlsEnabled(true);
       }
     }, 120);
   }
 
   async function revealVirtualResult(flipCount){
-    var key = COUNT_TO_RESULT[flipCount];
-    var info = RESULT_INFO[key];
-    showToast('🥢', flipCount+'개가 뒤집어졌어요!', 1500);
-    speak(flipCount+'개가 뒤집어졌어요!');
-    await delay(1500);
-    showToast(info.paws, '그래서... '+info.label+'!', 1400);
-    speak('그래서... '+info.label+'!');
-    await delay(1300);
-    handleResult(key);
+    try{
+      var key = COUNT_TO_RESULT[flipCount];
+      var info = RESULT_INFO[key];
+      showToast('🥢', flipCount+'개가 뒤집어졌어요!', 1500);
+      speak(flipCount+'개가 뒤집어졌어요!');
+      await delay(1500);
+      showToast(info.paws, '그래서... '+info.label+'!', 1400);
+      speak('그래서... '+info.label+'!');
+      await delay(1300);
+      handleResult(key);
+    } catch(e){
+      console.error('revealVirtualResult 중 오류:', e);
+      game.busy = false;
+      setControlsEnabled(true);
+    }
   }
 
   function announceTurn(first){
@@ -891,74 +906,82 @@
   }
 
   async function handleResult(key){
-    var info = RESULT_INFO[key];
-    var player = game.players[game.currentIdx];
+    // 애니메이션 도중 어디서든 예외가 나도(요소가 잠깐 없거나 등) 버튼이
+    // 영원히 눌리지 않는 상태로 남지 않도록 finally에서 항상 잠금을 푼다.
+    try{
+      var info = RESULT_INFO[key];
+      var player = game.players[game.currentIdx];
 
-    showToast(info.paws, info.label+'! '+info.steps+'칸 이동!', 1500);
-    speak(info.voice);
-    await delay(900);
+      showToast(info.paws, info.label+'! '+info.steps+'칸 이동!', 1500);
+      speak(info.voice);
+      await delay(900);
 
-    var path = computePath(player.node, info.steps);
-    for(var i=0;i<path.length;i++){
-      player.node = path[i];
-      var tokenEl = document.getElementById('token-'+player.slot);
-      var pos = NODES[player.node];
-      tokenEl.style.left = pos.x+'%'; tokenEl.style.top = pos.y+'%';
-      try{ tokenEl.animate([{transform:'translate(-50%,-50%) scale(1)'},{transform:'translate(-50%,-50%) scale(1.4)'},{transform:'translate(-50%,-50%) scale(1)'}],{duration:280,easing:'ease-out'}); }catch(e){}
-      playPop(440+i*40);
-      await delay(420);
-    }
-
-    var reachedHome = player.node==='HOME';
-    var captured = null;
-    if(!reachedHome){
-      captured = game.players.find(function(p){ return p!==player && !p.finished && p.node===player.node; });
-      if(captured){
-        captured.node='START';
+      var path = computePath(player.node, info.steps);
+      for(var i=0;i<path.length;i++){
+        player.node = path[i];
+        var tokenEl = document.getElementById('token-'+player.slot);
+        var pos = NODES[player.node];
+        if(tokenEl && pos){
+          tokenEl.style.left = pos.x+'%'; tokenEl.style.top = pos.y+'%';
+          try{ tokenEl.animate([{transform:'translate(-50%,-50%) scale(1)'},{transform:'translate(-50%,-50%) scale(1.4)'},{transform:'translate(-50%,-50%) scale(1)'}],{duration:280,easing:'ease-out'}); }catch(e){}
+        }
+        playPop(440+i*40);
+        await delay(420);
       }
-    }
 
-    if(reachedHome){
-      player.finished = true;
-      game.finishedCount++;
-      player.finishRank = game.finishedCount;
-      var medal = player.finishRank===1?'🥇':player.finishRank===2?'🥈':player.finishRank===3?'🥉':'🎖️';
-      renderTrophyShelf();
-      confettiBurst(30);
-      playFanfare();
-      showToast(medal, player.animal.name+'팀 도착! '+player.finishRank+'등이에요!', 2200);
-      speak(player.animal.name+'팀이 도착했어요! '+player.finishRank+'등이에요! 축하해요!');
-      await delay(1000);
-    } else if(captured){
-      showToast('💥', player.animal.name+'팀이 '+captured.animal.name+'팀을 잡았다! 한 번 더!', 1800);
-      speak(player.animal.name+'팀이 '+captured.animal.name+'팀을 잡았어요! 한 번 더 던지세요!');
-      await delay(700);
-    }
+      var reachedHome = player.node==='HOME';
+      var captured = null;
+      if(!reachedHome){
+        captured = game.players.find(function(p){ return p!==player && !p.finished && p.node===player.node; });
+        if(captured){
+          captured.node='START';
+        }
+      }
 
-    renderTokens();
-    renderStatusRow();
+      if(reachedHome){
+        player.finished = true;
+        game.finishedCount++;
+        player.finishRank = game.finishedCount;
+        var medal = player.finishRank===1?'🥇':player.finishRank===2?'🥈':player.finishRank===3?'🥉':'🎖️';
+        renderTrophyShelf();
+        confettiBurst(30);
+        playFanfare();
+        showToast(medal, player.animal.name+'팀 도착! '+player.finishRank+'등이에요!', 2200);
+        speak(player.animal.name+'팀이 도착했어요! '+player.finishRank+'등이에요! 축하해요!');
+        await delay(1000);
+      } else if(captured){
+        showToast('💥', player.animal.name+'팀이 '+captured.animal.name+'팀을 잡았다! 한 번 더!', 1800);
+        speak(player.animal.name+'팀이 '+captured.animal.name+'팀을 잡았어요! 한 번 더 던지세요!');
+        await delay(700);
+      }
 
-    var allDone = game.players.every(function(p){ return p.finished; });
-    if(allDone){
-      game.busy=false;
-      await delay(500);
-      showEndScreen();
-      return;
-    }
-
-    var extra = !reachedHome && (key==='yut' || key==='mo' || captured);
-    if(!extra){
-      nextTurn();
-      announceTurn(false);
-    } else {
+      renderTokens();
       renderStatusRow();
-      var banner = document.getElementById('turnBanner');
-      var p2 = game.players[game.currentIdx];
-      banner.innerHTML = '<span style="font-size:1.4rem;">'+p2.animal.emoji+'</span> <b>'+p2.animal.name+'팀</b> 한 번 더!';
+
+      var allDone = game.players.every(function(p){ return p.finished; });
+      if(allDone){
+        await delay(500);
+        showEndScreen();
+        return;
+      }
+
+      var extra = !reachedHome && (key==='yut' || key==='mo' || captured);
+      if(!extra){
+        nextTurn();
+        announceTurn(false);
+      } else {
+        renderStatusRow();
+        var banner = document.getElementById('turnBanner');
+        var p2 = game.players[game.currentIdx];
+        banner.innerHTML = '<span style="font-size:1.4rem;">'+p2.animal.emoji+'</span> <b>'+p2.animal.name+'팀</b> 한 번 더!';
+      }
+      renderTokens();
+    } catch(e){
+      console.error('handleResult 중 오류:', e);
+    } finally {
+      game.busy = false;
+      setControlsEnabled(true);
     }
-    renderTokens();
-    game.busy=false;
-    setControlsEnabled(true);
   }
 
   /* ----- 상단 버튼들 ----- */
@@ -968,7 +991,7 @@
     if(!soundOn && 'speechSynthesis' in window) window.speechSynthesis.cancel();
   });
   document.getElementById('btnModeSwitch').addEventListener('click', function(){
-    if(!game) return;
+    if(!game || game.busy) return;
     game.mode = game.mode==='virtual' ? 'manual' : 'virtual';
     renderControlPanel();
     speak(game.mode==='virtual' ? '화면에서 윷을 던질게요!' : '진짜 윷을 던지고 알려주세요!');
