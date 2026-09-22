@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>태블릿 사용 타임아웃 게시판</title>
-<meta name="description" content="아이 이름을 누르면 이름 위에 30분짜리 시각 타이머(타임타이머)가 시작되는 태블릿 사용 관리 게시판. 하루가 지나면 자동으로 초기화됩니다.">
+<meta name="description" content="아이 이름을 누르면 이름 위에 시각 타이머(타임타이머)가 시작되는 태블릿 사용 관리 게시판. 오전/오후 각각 15분씩 누적으로 사용하고, 하루가 지나면 자동으로 초기화됩니다.">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=Gowun+Dodum&display=swap">
 <style>
   :root{
@@ -92,6 +92,31 @@
   .icon-btn:hover{ background:#eff6ff; }
   .icon-btn:active{ transform:scale(.96); }
 
+  .period-toggle{
+    display:inline-flex;
+    background:#fff;
+    border:1px solid var(--border);
+    border-radius:999px;
+    padding:3px;
+    gap:2px;
+    box-shadow:0 1px 3px rgba(15,23,42,.05);
+  }
+  .period-btn{
+    border:none;
+    background:transparent;
+    border-radius:999px;
+    padding:.45rem 1.1rem;
+    font-size:.85rem;
+    font-weight:700;
+    color:var(--text-soft);
+    cursor:pointer;
+    transition:background .15s ease, color .15s ease;
+  }
+  .period-btn.active{
+    background:var(--primary);
+    color:#fff;
+  }
+
   .board{
     display:grid;
     grid-template-columns:repeat(auto-fill,minmax(150px,1fr));
@@ -114,6 +139,7 @@
   }
   .kid-card.running{ border-color:var(--red); }
   .kid-card.warn{ border-color:var(--amber); background:#fffbeb; }
+  .kid-card.exhausted{ background:#f8fafc; }
   .kid-card.ended{
     border-color:var(--red);
     background:#fef2f2;
@@ -133,6 +159,7 @@
   }
   .kid-card.running .dial{ --dial-red:var(--red); }
   .kid-card.warn .dial{ --dial-red:var(--amber); }
+  .kid-card.idle .dial{ --dial-red:#93c5fd; }
   .dial-face{
     width:64%; height:64%; border-radius:50%;
     background:#fff;
@@ -148,6 +175,7 @@
   .kid-card.ended .dial-face .dial-time{ display:none; }
   .kid-card.ended .dial-face .dial-icon::after{ content:'⏰'; }
   .kid-card:not(.ended) .dial-face .dial-icon.end-icon{ display:none; }
+  .kid-card.exhausted .dial-face{ opacity:.55; }
 
   .kid-name{
     font-size:clamp(1rem,1.6vw,1.15rem);
@@ -163,6 +191,7 @@
   .kid-card.running .status-text{ color:var(--red); }
   .kid-card.warn .status-text{ color:var(--amber); font-weight:700; }
   .kid-card.ended .status-text{ color:var(--red); font-weight:700; }
+  .kid-card.exhausted .status-text{ color:var(--text-soft); font-weight:700; }
 
   .action-btn{
     width:100%;
@@ -181,6 +210,8 @@
   .action-btn.stop:hover{ background:#fef2f2; }
   .action-btn.ack{ background:var(--red); color:#fff; }
   .action-btn.ack:hover{ filter:brightness(1.08); }
+  .action-btn.exhausted-btn{ background:var(--track); color:var(--text-soft); cursor:default; }
+  .action-btn.exhausted-btn:active{ transform:none; }
 
   .legend{
     max-width:1400px;
@@ -198,6 +229,7 @@
   .dot.running{ background:var(--red); }
   .dot.warn{ background:var(--amber); }
   .dot.done{ background:var(--red); box-shadow:0 0 0 3px rgba(239,68,68,.25); }
+  .dot.exhausted{ background:var(--text-soft); }
 
   @media (max-width:480px){
     .top-bar{ padding-top:52px; }
@@ -213,10 +245,14 @@
 <header class="top-bar">
   <div class="title-group">
     <h1>📱 태블릿 사용 타임아웃 게시판</h1>
-    <p class="subtitle">이름을 누르면 그 위에 30분 시각 타이머가 시작돼요. 자정이 지나면 자동으로 초기화됩니다.</p>
+    <p class="subtitle">이름을 누르면 오전/오후 각각 15분씩 시각 타이머가 시작돼요. 정지해도 사용한 시간은 그대로 남고, 자정이 지나면 자동으로 초기화됩니다.</p>
   </div>
   <div class="top-bar-right">
     <span class="today-badge" id="todayBadge"></span>
+    <div class="period-toggle" id="periodToggle">
+      <button class="period-btn" type="button" data-period="am">오전</button>
+      <button class="period-btn" type="button" data-period="pm">오후</button>
+    </div>
     <button class="icon-btn" id="muteBtn" type="button">🔔 소리 켜짐</button>
     <button class="icon-btn" id="resetAllBtn" type="button">↺ 전체 초기화</button>
   </div>
@@ -226,9 +262,10 @@
 
 <footer class="legend">
   <span><i class="dot idle"></i>대기중 · 눌러서 시작</span>
-  <span><i class="dot running"></i>사용중 (30분 카운트다운)</span>
-  <span><i class="dot warn"></i>5분 이하 남음</span>
+  <span><i class="dot running"></i>사용중 (15분 누적 카운트다운)</span>
+  <span><i class="dot warn"></i>3분 이하 남음</span>
   <span><i class="dot done"></i>시간 종료 · 확인을 눌러주세요</span>
+  <span><i class="dot exhausted"></i>오늘(오전/오후) 사용 시간 다 씀</span>
 </footer>
 
 <script>
@@ -241,10 +278,10 @@
     "하소율","장다미"
   ];
 
-  var STORAGE_KEY = "pengmam_tablet_timeout_v1";
+  var STORAGE_KEY = "pengmam_tablet_timeout_v2";
   var MUTE_KEY = "pengmam_tablet_timeout_muted";
-  var DURATION_MS = 30 * 60 * 1000;
-  var WARN_MS = 5 * 60 * 1000;
+  var DURATION_MS = 15 * 60 * 1000;
+  var WARN_MS = 3 * 60 * 1000;
 
   function todayStr(d){
     d = d || new Date();
@@ -269,9 +306,10 @@
   }
 
   var state = loadState();
-  var alertedNames = {};
+  var alertedKeys = {};
   var muted = localStorage.getItem(MUTE_KEY) === "1";
   var audioCtx = null;
+  var selectedPeriod = (new Date().getHours() < 12) ? "am" : "pm";
 
   function getAudioCtx(){
     if(!audioCtx){
@@ -310,32 +348,64 @@
     return m + ":" + s;
   }
 
-  function computeStatus(name){
-    var session = state.sessions[name];
-    if(!session) return { status: "idle", remaining: DURATION_MS };
-    var remaining = DURATION_MS - (Date.now() - session.startedAt);
-    if(remaining <= 0) return { status: "ended", remaining: 0 };
-    if(remaining <= WARN_MS) return { status: "warn", remaining: remaining };
-    return { status: "running", remaining: remaining };
+  // ---- 오전/오후 별로 누적 사용시간(usedMs)을 저장하는 상태 모델 ----
+  function getPeriodState(name, period){
+    var s = state.sessions[name];
+    if(!s) s = state.sessions[name] = {};
+    var p = s[period];
+    if(!p) p = s[period] = { usedMs: 0, startedAt: null, ended: false };
+    return p;
+  }
+
+  // 실행 중인 타이머가 한도를 넘었으면 그 자리에서 확정(usedMs 고정)하고,
+  // 그렇지 않으면 현재 남은 시간을 계산만 해서 돌려준다 (저장은 안 함).
+  function evalPeriod(name, period){
+    var pd = getPeriodState(name, period);
+    if(pd.startedAt){
+      var elapsed = Date.now() - pd.startedAt;
+      var potential = pd.usedMs + elapsed;
+      if(potential >= DURATION_MS){
+        pd.usedMs = DURATION_MS;
+        pd.startedAt = null;
+        pd.ended = true;
+        saveState(state);
+        return { status: "ended", remaining: 0 };
+      }
+      var remaining = DURATION_MS - potential;
+      if(remaining <= WARN_MS) return { status: "warn", remaining: remaining };
+      return { status: "running", remaining: remaining };
+    }
+    if(pd.ended) return { status: "ended", remaining: 0 };
+    var idleRemaining = DURATION_MS - pd.usedMs;
+    if(idleRemaining <= 0) return { status: "exhausted", remaining: 0 };
+    return { status: "idle", remaining: idleRemaining };
   }
 
   function startTimer(name){
+    var pd = getPeriodState(name, selectedPeriod);
+    if(pd.startedAt) return;
+    if(DURATION_MS - pd.usedMs <= 0) return;
     getAudioCtx();
-    state.sessions[name] = { startedAt: Date.now() };
-    delete alertedNames[name];
+    pd.startedAt = Date.now();
+    pd.ended = false;
     saveState(state);
     updateCard(name);
   }
   function stopTimer(name){
-    delete state.sessions[name];
-    delete alertedNames[name];
+    var pd = getPeriodState(name, selectedPeriod);
+    if(pd.startedAt){
+      var elapsed = Date.now() - pd.startedAt;
+      pd.usedMs = Math.min(DURATION_MS, pd.usedMs + elapsed);
+      pd.startedAt = null;
+    }
     saveState(state);
     updateCard(name);
   }
   function ackTimer(name){
-    delete state.sessions[name];
-    delete alertedNames[name];
+    var pd = getPeriodState(name, selectedPeriod);
+    pd.ended = false;
     saveState(state);
+    delete alertedKeys[name + "|" + selectedPeriod];
     updateCard(name);
   }
 
@@ -357,7 +427,7 @@
       face.className = "dial-face";
       var timeEl = document.createElement("span");
       timeEl.className = "dial-time";
-      timeEl.textContent = "30:00";
+      timeEl.textContent = fmt(DURATION_MS);
       var iconEl = document.createElement("span");
       iconEl.className = "dial-icon";
       iconEl.textContent = "📱";
@@ -392,17 +462,19 @@
 
   function updateCard(name){
     var ref = cardRefs[name];
-    var r = computeStatus(name);
-    ref.card.classList.remove("idle", "running", "warn", "ended");
+    var r = evalPeriod(name, selectedPeriod);
+    ref.card.classList.remove("idle", "running", "warn", "ended", "exhausted");
     ref.card.classList.add(r.status);
 
     if(r.status === "idle"){
-      ref.timeEl.textContent = "30:00";
+      ref.timeEl.textContent = fmt(r.remaining);
       ref.iconEl.textContent = "📱";
-      ref.statusEl.textContent = "";
-      ref.dial.style.setProperty("--angle", "0deg");
+      ref.statusEl.textContent = r.remaining < DURATION_MS ? "일부 사용함" : "";
+      var idleAngle = (r.remaining / DURATION_MS) * 360;
+      ref.dial.style.setProperty("--angle", idleAngle.toFixed(2) + "deg");
       ref.btn.className = "action-btn start";
       ref.btn.textContent = "▶ 시작";
+      ref.btn.disabled = false;
       ref.btn.onclick = function(){ startTimer(name); };
     } else if(r.status === "running" || r.status === "warn"){
       ref.timeEl.textContent = fmt(r.remaining);
@@ -412,7 +484,17 @@
       ref.dial.style.setProperty("--angle", angle.toFixed(2) + "deg");
       ref.btn.className = "action-btn stop";
       ref.btn.textContent = "■ 정지";
+      ref.btn.disabled = false;
       ref.btn.onclick = function(){ stopTimer(name); };
+    } else if(r.status === "exhausted"){
+      ref.timeEl.textContent = "00:00";
+      ref.iconEl.textContent = "📱";
+      ref.statusEl.textContent = "사용 시간 다 씀";
+      ref.dial.style.setProperty("--angle", "0deg");
+      ref.btn.className = "action-btn exhausted-btn";
+      ref.btn.textContent = "사용 완료";
+      ref.btn.disabled = true;
+      ref.btn.onclick = null;
     } else {
       ref.timeEl.textContent = "00:00";
       ref.iconEl.textContent = "⏰";
@@ -420,9 +502,11 @@
       ref.dial.style.setProperty("--angle", "0deg");
       ref.btn.className = "action-btn ack";
       ref.btn.textContent = "✔ 확인";
+      ref.btn.disabled = false;
       ref.btn.onclick = function(){ ackTimer(name); };
-      if(!alertedNames[name]){
-        alertedNames[name] = true;
+      var key = name + "|" + selectedPeriod;
+      if(!alertedKeys[key]){
+        alertedKeys[key] = true;
         playChime();
       }
     }
@@ -436,7 +520,7 @@
     var today = todayStr();
     if(state.date !== today){
       state = { date: today, sessions: {} };
-      alertedNames = {};
+      alertedKeys = {};
       saveState(state);
       updateAll();
       updateTodayBadge();
@@ -448,6 +532,21 @@
     var d = new Date();
     todayBadge.textContent = d.toLocaleDateString("ko-KR", { month: "long", day: "numeric", weekday: "long" });
   }
+
+  var periodToggle = document.getElementById("periodToggle");
+  function renderPeriodToggle(){
+    var btns = periodToggle.querySelectorAll(".period-btn");
+    for(var i = 0; i < btns.length; i++){
+      btns[i].classList.toggle("active", btns[i].getAttribute("data-period") === selectedPeriod);
+    }
+  }
+  periodToggle.addEventListener("click", function(e){
+    var btn = e.target.closest(".period-btn");
+    if(!btn) return;
+    selectedPeriod = btn.getAttribute("data-period");
+    renderPeriodToggle();
+    updateAll();
+  });
 
   var muteBtn = document.getElementById("muteBtn");
   function renderMuteBtn(){
@@ -461,14 +560,15 @@
   });
 
   document.getElementById("resetAllBtn").addEventListener("click", function(){
-    if(!confirm("모든 어린이의 타이머를 초기화할까요?")) return;
+    if(!confirm("모든 어린이의 오전/오후 사용 시간을 초기화할까요?")) return;
     state.sessions = {};
-    alertedNames = {};
+    alertedKeys = {};
     saveState(state);
     updateAll();
   });
 
   buildBoard();
+  renderPeriodToggle();
   updateAll();
   updateTodayBadge();
   renderMuteBtn();
