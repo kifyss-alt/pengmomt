@@ -355,7 +355,7 @@
 <header class="top-bar">
   <div class="title-group">
     <h1>📱 태블릿 사용 타임아웃 게시판</h1>
-    <p class="subtitle">이름을 누르면 오전/오후 각각 15분씩 시각 타이머가 시작돼요. 정지해도 사용한 시간은 그대로 남고, 자정이 지나면 자동으로 초기화됩니다.</p>
+    <p class="subtitle">이름을 누르면 오전/오후 각각 25분씩 시각 타이머가 시작돼요. 정지해도 사용한 시간은 그대로 남고, 자정이 지나면 자동으로 초기화됩니다.</p>
   </div>
   <div class="top-bar-right">
     <span class="today-badge" id="todayBadge"></span>
@@ -373,7 +373,7 @@
 
 <footer class="legend">
   <span><i class="dot idle"></i>대기중 · 눌러서 시작</span>
-  <span><i class="dot running"></i>사용중 (15분 누적 카운트다운)</span>
+  <span><i class="dot running"></i>사용중 (25분 누적 카운트다운)</span>
   <span><i class="dot warn"></i>3분 이하 남음</span>
   <span><i class="dot done"></i>시간 종료 · 확인을 눌러주세요</span>
   <span><i class="dot exhausted"></i>오늘(오전/오후) 사용 시간 다 씀</span>
@@ -400,7 +400,7 @@
 
   var STORAGE_KEY = "pengmam_tablet_timeout_v2";
   var MUTE_KEY = "pengmam_tablet_timeout_muted";
-  var DURATION_MS = 15 * 60 * 1000;
+  var DURATION_MS = 25 * 60 * 1000;
   var WARN_MS = 3 * 60 * 1000;
 
   function todayStr(d){
