@@ -30,6 +30,9 @@
     font-family:'Gowun Dodum','Malgun Gothic',sans-serif;
     -webkit-tap-highlight-color:transparent;
     word-break:keep-all;
+    display:flex;
+    flex-direction:column;
+    overflow:hidden;
   }
   h1,h2{
     font-family:'Gowun Batang',serif;
@@ -47,13 +50,15 @@
   .back-link:hover{ color:var(--primary); background:#fff; }
 
   .top-bar{
+    flex:0 0 auto;
     display:flex;
     flex-wrap:wrap;
     align-items:center;
     justify-content:space-between;
     gap:12px;
-    padding:56px clamp(16px,4vw,40px) 16px;
-    max-width:1400px;
+    padding:44px clamp(16px,4vw,40px) 10px;
+    max-width:1600px;
+    width:100%;
     margin:0 auto;
   }
   .title-group h1{
@@ -118,23 +123,32 @@
   }
 
   .board{
+    flex:1 1 auto;
+    min-height:0;
     display:grid;
-    grid-template-columns:repeat(auto-fill,minmax(150px,1fr));
-    gap:16px;
-    padding:8px clamp(16px,4vw,40px) 40px;
-    max-width:1400px;
+    grid-template-columns:repeat(6, 1fr);
+    grid-template-rows:repeat(3, minmax(0,1fr));
+    gap:clamp(8px,1.4vh,16px);
+    padding:4px clamp(16px,4vw,40px) 10px;
+    max-width:1600px;
+    width:100%;
     margin:0 auto;
+    overflow-y:auto;
+    overflow-x:hidden;
   }
 
   .kid-card{
     background:var(--bg-card);
     border:2px solid var(--border);
     border-radius:var(--radius-lg);
-    padding:16px 10px 14px;
+    padding:clamp(8px,1.6vh,16px) 10px clamp(6px,1.2vh,14px);
     display:flex;
     flex-direction:column;
     align-items:center;
-    gap:10px;
+    justify-content:space-between;
+    gap:clamp(3px,0.8vh,10px);
+    min-height:0;
+    overflow:hidden;
     transition:border-color .25s ease, background .25s ease, box-shadow .25s ease;
   }
   .kid-card.running{ border-color:var(--red); }
@@ -150,7 +164,12 @@
     50%{ box-shadow:0 0 0 9px rgba(239,68,68,0); }
   }
 
-  .dial-wrap{ position:relative; width:88px; height:88px; }
+  .dial-wrap{
+    position:relative;
+    flex:0 0 auto;
+    width:clamp(40px,9vh,90px);
+    height:clamp(40px,9vh,90px);
+  }
   .dial{
     width:100%; height:100%; border-radius:50%;
     background:conic-gradient(from -90deg, var(--dial-red,var(--red)) 0deg var(--angle,0deg), var(--track) var(--angle,0deg) 360deg);
@@ -167,26 +186,26 @@
     gap:1px;
   }
   .dial-time{
-    font-weight:700; font-size:.86rem; letter-spacing:.02em;
+    font-weight:700; font-size:clamp(0.6rem,1.7vh,0.86rem); letter-spacing:.02em;
     font-variant-numeric:tabular-nums;
     font-family:'Gowun Dodum',sans-serif;
   }
-  .dial-icon{ font-size:1.05rem; line-height:1; }
+  .dial-icon{ font-size:clamp(0.7rem,2vh,1.05rem); line-height:1; }
   .kid-card.ended .dial-face .dial-time{ display:none; }
   .kid-card.ended .dial-face .dial-icon::after{ content:'⏰'; }
   .kid-card:not(.ended) .dial-face .dial-icon.end-icon{ display:none; }
   .kid-card.exhausted .dial-face{ opacity:.55; }
 
   .kid-name{
-    font-size:clamp(1rem,1.6vw,1.15rem);
+    font-size:clamp(0.78rem,2vh,1.15rem);
     font-weight:700;
     text-align:center;
+    line-height:1.15;
   }
   .status-text{
-    font-size:.72rem;
+    font-size:clamp(0.58rem,1.3vh,0.72rem);
     color:var(--text-soft);
-    margin-top:-6px;
-    min-height:1em;
+    line-height:1.2;
   }
   .kid-card.running .status-text{ color:var(--red); }
   .kid-card.warn .status-text{ color:var(--amber); font-weight:700; }
@@ -194,10 +213,11 @@
   .kid-card.exhausted .status-text{ color:var(--text-soft); font-weight:700; }
 
   .action-btn{
+    flex:0 0 auto;
     width:100%;
     border-radius:999px;
-    padding:.5rem 0;
-    font-size:.85rem;
+    padding:clamp(.3rem,.9vh,.5rem) 0;
+    font-size:clamp(0.68rem,1.6vh,0.85rem);
     font-weight:700;
     cursor:pointer;
     border:2px solid transparent;
@@ -214,13 +234,15 @@
   .action-btn.exhausted-btn:active{ transform:none; }
 
   .legend{
-    max-width:1400px;
+    flex:0 0 auto;
+    max-width:1600px;
+    width:100%;
     margin:0 auto;
-    padding:0 clamp(16px,4vw,40px) 40px;
+    padding:6px clamp(16px,4vw,40px) 10px;
     display:flex;
     flex-wrap:wrap;
-    gap:16px;
-    font-size:.8rem;
+    gap:12px 16px;
+    font-size:.78rem;
     color:var(--text-soft);
   }
   .legend span{ display:inline-flex; align-items:center; gap:6px; }
@@ -231,10 +253,15 @@
   .dot.done{ background:var(--red); box-shadow:0 0 0 3px rgba(239,68,68,.25); }
   .dot.exhausted{ background:var(--text-soft); }
 
+  @media (max-width:900px){
+    .board{ grid-template-columns:repeat(3, 1fr); grid-template-rows:none; grid-auto-rows:minmax(150px, 1fr); }
+    .dial-wrap{ width:56px; height:56px; }
+    .kid-name{ font-size:1rem; }
+  }
   @media (max-width:480px){
-    .top-bar{ padding-top:52px; }
-    .board{ grid-template-columns:repeat(auto-fill,minmax(120px,1fr)); gap:10px; }
-    .dial-wrap{ width:72px; height:72px; }
+    .top-bar{ padding-top:48px; }
+    .board{ grid-template-columns:repeat(2, 1fr); gap:10px; }
+    .dial-wrap{ width:56px; height:56px; }
   }
 
   .alarm-overlay{
