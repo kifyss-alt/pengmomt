@@ -1,0 +1,44 @@
+{
+  "name": "tablet-timeout-widget",
+  "version": "1.0.0",
+  "private": true,
+  "description": "유치원 교실용 태블릿 사용 타임아웃 게시판 데스크톱 위젯",
+  "main": "main.js",
+  "author": "펭맘",
+  "scripts": {
+    "start": "electron .",
+    "dist:win": "electron-builder --win nsis portable --x64"
+  },
+  "devDependencies": {
+    "electron": "^33.0.0",
+    "electron-builder": "^25.0.0"
+  },
+  "build": {
+    "appId": "com.pengmam.tablettimeoutwidget",
+    "productName": "태블릿 타임아웃 게시판",
+    "asar": true,
+    "files": [
+      "main.js",
+      "preload.js",
+      "app/**/*"
+    ],
+    "directories": {
+      "buildResources": "build",
+      "output": "dist"
+    },
+    "publish": null,
+    "win": {
+      "target": [
+        { "target": "nsis", "arch": ["x64"] },
+        { "target": "portable", "arch": ["x64"] }
+      ],
+      "icon": "build/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    }
+  }
+}
