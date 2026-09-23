@@ -468,6 +468,28 @@
     }catch(e){}
   }
 
+  var koVoice = null;
+  function loadVoice(){
+    if(!("speechSynthesis" in window)) return;
+    var vs = window.speechSynthesis.getVoices();
+    koVoice = vs.find(function(v){ return v.lang && v.lang.indexOf("ko") === 0; }) || null;
+  }
+  if("speechSynthesis" in window){
+    loadVoice();
+    window.speechSynthesis.onvoiceschanged = loadVoice;
+  }
+  function speakName(name){
+    if(muted) return;
+    if(!("speechSynthesis" in window)) return;
+    try{
+      window.speechSynthesis.cancel();
+      var u = new SpeechSynthesisUtterance(name);
+      u.lang = "ko-KR"; u.rate = 0.92; u.pitch = 1.05; u.volume = 1;
+      if(koVoice) u.voice = koVoice;
+      window.speechSynthesis.speak(u);
+    }catch(e){}
+  }
+
   function fmt(ms){
     var totalSec = Math.max(0, Math.ceil(ms / 1000));
     var m = String(Math.floor(totalSec / 60)).padStart(2, "0");
@@ -516,6 +538,7 @@
     pd.startedAt = Date.now();
     pd.ended = false;
     saveState(state);
+    speakName(name);
     refreshBoard();
   }
   function stopTimer(name){
