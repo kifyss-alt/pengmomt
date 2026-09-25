@@ -403,8 +403,8 @@
     do:  {steps:1, label:'도', voice:'도! 한 칸!',           paws:'🐾'},
     gae: {steps:2, label:'개', voice:'개! 두 칸!',           paws:'🐾🐾'},
     geol:{steps:3, label:'걸', voice:'걸! 세 칸!',           paws:'🐾🐾🐾'},
-    yut: {steps:4, label:'윷', voice:'윷! 네 칸! 한 번 더!',  paws:'🐾🐾🐾🐾'},
-    mo:  {steps:5, label:'모', voice:'모! 다섯 칸! 한 번 더!',paws:'🐾🐾🐾🐾🐾'}
+    yut: {steps:4, label:'윷', voice:'윷! 네 칸!',  paws:'🐾🐾🐾🐾'},
+    mo:  {steps:5, label:'모', voice:'모! 다섯 칸!',paws:'🐾🐾🐾🐾🐾'}
   };
 
   /* ---------------------------------------------------------------
@@ -1068,6 +1068,9 @@
         var banner = document.getElementById('turnBanner');
         var p2 = game.players[game.currentIdx];
         banner.innerHTML = '<span style="font-size:1.4rem;">'+p2.animal.emoji+'</span> <b>'+p2.animal.name+'팀</b> 한 번 더!';
+        if(!captured){
+          await speak(p2.animal.name+'팀, 한 번 더 던지세요!');
+        }
       }
       renderTokens();
     } catch(e){
