@@ -970,6 +970,22 @@
         return;
       }
 
+      var remaining = game.players.filter(function(p){ return !p.finished; });
+      if(reachedHome && remaining.length===1){
+        var lastPlayer = remaining[0];
+        lastPlayer.finished = true;
+        game.finishedCount++;
+        lastPlayer.finishRank = game.finishedCount;
+        renderTrophyShelf();
+        renderStatusRow();
+        renderTokens();
+        showToast('🏁', '남은 팀이 한 팀밖에 없어서 게임을 종료합니다.', 2400);
+        speak('남은 팀이 한 팀밖에 없어서 게임을 종료합니다.');
+        await delay(2400);
+        showEndScreen();
+        return;
+      }
+
       var extra = !reachedHome && (key==='yut' || key==='mo' || captured);
       if(!extra){
         nextTurn();
