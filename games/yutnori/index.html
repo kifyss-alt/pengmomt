@@ -274,11 +274,12 @@
   .rank-row .badge{ width:36px; height:36px; border-radius:50%; background:var(--c,#ccc); display:flex; align-items:center; justify-content:center; font-size:1.2rem; }
   .rank-row .nm{ font-size:1.05rem; }
 
-  .mute-off .snd-on{ display:none; }
-  .mute-on .snd-off{ display:none; }
-  #btnSound .snd-off{ display:none; }
-  #btnSound.muted .snd-on{ display:none; }
-  #btnSound.muted .snd-off{ display:inline; }
+  .snd-toggle .snd-off{ display:none; }
+  .snd-toggle.muted .snd-on{ display:none; }
+  .snd-toggle.muted .snd-off{ display:inline; }
+
+  .hero-banner-wrap{ position:relative; }
+  .hero-banner-wrap .icon-btn{ position:absolute; top:10px; right:10px; }
 
   @media (max-width:380px){
     .hero-title{ font-size:1.7rem; }
@@ -292,7 +293,10 @@
 
   <!-- SCREEN 1 : 팀 선택 -->
   <section class="screen active" id="screen-setup">
-    <img class="hero-banner" src="assets/title-banner.webp" alt="동물 윷놀이 - 신나는 윷놀이 한 판!">
+    <div class="hero-banner-wrap">
+      <img class="hero-banner" src="assets/title-banner.webp" alt="동물 윷놀이 - 신나는 윷놀이 한 판!">
+      <button class="icon-btn snd-toggle" id="btnMusicToggle" title="음악 끄고 켜기"><span class="snd-on">🔊</span><span class="snd-off">🔇</span></button>
+    </div>
 
     <div class="card">
       <div class="step-title">몇 명이서 놀까요?</div>
@@ -334,7 +338,7 @@
       <button class="icon-btn" id="btnRestart" title="다시하기">🔄</button>
       <div class="status-row" id="statusRow"></div>
       <button class="icon-btn" id="btnModeSwitch" title="던지기 방법 바꾸기">🎲</button>
-      <button class="icon-btn" id="btnSound" title="소리 끄고 켜기"><span class="snd-on">🔊</span><span class="snd-off">🔇</span></button>
+      <button class="icon-btn snd-toggle" id="btnSound" title="소리 끄고 켜기"><span class="snd-on">🔊</span><span class="snd-off">🔇</span></button>
     </div>
     <div class="trophy-shelf" id="trophyShelf"></div>
     <div class="game-main">
@@ -513,6 +517,64 @@
     if(!soundOn) return;
     [523,659,784,1047].forEach(function(f,i){ setTimeout(function(){ playPop(f); }, i*130); });
   }
+
+  /* ---------------------------------------------------------------
+   * 시작 화면 레트로 배경음악 (합성 8비트 루프, 외부 음원 없음)
+   * ------------------------------------------------------------- */
+  var MUSIC_BPM = 150;
+  var MUSIC_EIGHTH = 60/MUSIC_BPM/2;
+  var MUSIC_LEAD = ['C5','E5','G5','C6','G5','E5','D5','E5','C5','E5','G5','C6','G5','E5','D5',null];
+  var MUSIC_BASS = ['C3','G2','A2','F2','C3','G2','A2','F2'];
+  var MUSIC_LOOP_SEC = MUSIC_LEAD.length * MUSIC_EIGHTH;
+  var musicOn = false, musicTimer = null, musicGain = null;
+  function noteFreq(name){
+    var SEMITONE = {C:-9,'C#':-8,D:-7,'D#':-6,E:-5,F:-4,'F#':-3,G:-2,'G#':-1,A:0,'A#':1,B:2};
+    var m = /^([A-G]#?)(\d)$/.exec(name);
+    if(!m) return 440;
+    return 440 * Math.pow(2, (SEMITONE[m[1]] + (parseInt(m[2],10)-4)*12)/12);
+  }
+  function musicNote(ctx, freq, startTime, dur, type, vol){
+    try{
+      var o = ctx.createOscillator(), g = ctx.createGain();
+      o.type = type; o.frequency.value = freq;
+      g.gain.setValueAtTime(0, startTime);
+      g.gain.linearRampToValueAtTime(vol, startTime+0.01);
+      g.gain.exponentialRampToValueAtTime(0.0001, startTime+dur);
+      o.connect(g); g.connect(musicGain);
+      o.start(startTime); o.stop(startTime+dur+0.02);
+    }catch(e){}
+  }
+  function scheduleMusicLoop(){
+    if(!musicOn) return;
+    var ctx = ensureAudio();
+    if(!ctx || !musicGain){ musicOn=false; return; }
+    var t0 = ctx.currentTime + 0.05;
+    MUSIC_LEAD.forEach(function(n,i){
+      if(!n) return;
+      musicNote(ctx, noteFreq(n), t0+i*MUSIC_EIGHTH, MUSIC_EIGHTH*0.9, 'square', 0.045);
+    });
+    MUSIC_BASS.forEach(function(n,i){
+      musicNote(ctx, noteFreq(n), t0+i*MUSIC_EIGHTH*2, MUSIC_EIGHTH*1.8, 'triangle', 0.07);
+    });
+    musicTimer = setTimeout(scheduleMusicLoop, MUSIC_LOOP_SEC*1000);
+  }
+  function startMusic(){
+    if(musicOn || !soundOn) return;
+    var ctx = ensureAudio();
+    if(!ctx) return;
+    if(ctx.state==='suspended'){ ctx.resume().catch(function(){}); }
+    if(!musicGain){
+      musicGain = ctx.createGain();
+      musicGain.gain.value = 0.5;
+      musicGain.connect(ctx.destination);
+    }
+    musicOn = true;
+    scheduleMusicLoop();
+  }
+  function stopMusic(){
+    musicOn = false;
+    clearTimeout(musicTimer);
+  }
   var koVoice = null;
   function loadVoice(){
     if(!('speechSynthesis' in window)) return;
@@ -555,6 +617,7 @@
   function showScreen(id){
     screens.forEach(function(s){ s.classList.toggle('active', s.id===id); });
     appEl.classList.toggle('wide', id==='screen-game');
+    if(id==='screen-setup' || id==='screen-mode'){ startMusic(); } else { stopMusic(); }
   }
 
   var toastEl = document.getElementById('toast');
@@ -1016,10 +1079,19 @@
   }
 
   /* ----- 상단 버튼들 ----- */
-  document.getElementById('btnSound').addEventListener('click', function(){
-    soundOn = !soundOn;
-    this.classList.toggle('muted', !soundOn);
-    if(!soundOn && 'speechSynthesis' in window) window.speechSynthesis.cancel();
+  function setSoundOn(on){
+    soundOn = on;
+    document.querySelectorAll('.snd-toggle').forEach(function(b){ b.classList.toggle('muted', !soundOn); });
+    if(!soundOn){
+      if('speechSynthesis' in window) window.speechSynthesis.cancel();
+      stopMusic();
+    } else {
+      var activeScreen = document.querySelector('.screen.active');
+      if(activeScreen && (activeScreen.id==='screen-setup' || activeScreen.id==='screen-mode')) startMusic();
+    }
+  }
+  document.querySelectorAll('.snd-toggle').forEach(function(b){
+    b.addEventListener('click', function(){ setSoundOn(!soundOn); });
   });
   document.getElementById('btnModeSwitch').addEventListener('click', function(){
     if(!game || game.busy) return;
@@ -1054,6 +1126,12 @@
   /* init */
   renderSlots();
   updateNextBtn();
+  startMusic();
+  document.addEventListener('click', function firstGesture(){
+    document.removeEventListener('click', firstGesture);
+    var activeScreen = document.querySelector('.screen.active');
+    if(activeScreen && (activeScreen.id==='screen-setup' || activeScreen.id==='screen-mode')) startMusic();
+  }, {once:true});
 })();
 </script>
 </body>
