@@ -565,15 +565,25 @@
     if(ctx.state==='suspended'){ ctx.resume().catch(function(){}); }
     if(!musicGain){
       musicGain = ctx.createGain();
-      musicGain.gain.value = 0.5;
       musicGain.connect(ctx.destination);
     }
+    musicGain.gain.cancelScheduledValues(ctx.currentTime);
+    musicGain.gain.setValueAtTime(0.5, ctx.currentTime);
     musicOn = true;
     scheduleMusicLoop();
   }
   function stopMusic(){
     musicOn = false;
     clearTimeout(musicTimer);
+    // 이미 예약된 음표들이 루프 끝까지 계속 들리지 않도록, 공유 게인을
+    // 즉시 0으로 낮춰서 예약된 소리까지 한 번에 끈다.
+    if(musicGain){
+      try{
+        var ctx = ensureAudio();
+        musicGain.gain.cancelScheduledValues(ctx.currentTime);
+        musicGain.gain.setValueAtTime(0, ctx.currentTime);
+      }catch(e){}
+    }
   }
   var koVoice = null;
   function loadVoice(){
