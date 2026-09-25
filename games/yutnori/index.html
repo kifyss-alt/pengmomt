@@ -524,15 +524,25 @@
     window.speechSynthesis.onvoiceschanged = loadVoice;
   }
   function speak(text){
-    if(!soundOn) return;
-    if(!('speechSynthesis' in window)) return;
-    try{
-      window.speechSynthesis.cancel();
-      var u = new SpeechSynthesisUtterance(text);
-      u.lang='ko-KR'; u.rate=0.92; u.pitch=1.25;
-      if(koVoice) u.voice = koVoice;
-      window.speechSynthesis.speak(u);
-    }catch(e){}
+    // 말소리가 끝까지 재생된 뒤에야 다음 동작으로 넘어가도록, 발화가
+    // 끝나면(onend) 풀리는 프로미스를 돌려준다. 일부 브라우저에서
+    // onend가 안 불리는 경우를 대비해 텍스트 길이 기반의 안전장치
+    // 타임아웃도 함께 둔다.
+    return new Promise(function(resolve){
+      if(!soundOn || !('speechSynthesis' in window)){ resolve(); return; }
+      try{
+        window.speechSynthesis.cancel();
+        var u = new SpeechSynthesisUtterance(text);
+        u.lang='ko-KR'; u.rate=0.92; u.pitch=1.25;
+        if(koVoice) u.voice = koVoice;
+        var done = false;
+        var finish = function(){ if(done) return; done = true; resolve(); };
+        u.onend = finish;
+        u.onerror = finish;
+        setTimeout(finish, Math.max(1200, text.length*180));
+        window.speechSynthesis.speak(u);
+      }catch(e){ resolve(); }
+    });
   }
 
   function delay(ms){ return new Promise(function(res){ setTimeout(res, ms); }); }
@@ -880,11 +890,11 @@
       var key = COUNT_TO_RESULT[flipCount];
       var info = RESULT_INFO[key];
       showToast('🥢', flipCount+'개가 뒤집어졌어요!', 1500);
-      speak(flipCount+'개가 뒤집어졌어요!');
-      await delay(1500);
+      await speak(flipCount+'개가 뒤집어졌어요!');
+      await delay(500);
       showToast(info.paws, '그래서... '+info.label+'!', 1400);
-      speak('그래서... '+info.label+'!');
-      await delay(1300);
+      await speak('그래서... '+info.label+'!');
+      await delay(500);
       handleResult(key);
     } catch(e){
       console.error('revealVirtualResult 중 오류:', e);
@@ -893,12 +903,12 @@
     }
   }
 
-  function announceTurn(first){
+  async function announceTurn(first){
     renderStatusRow();
     var p = game.players[game.currentIdx];
     var banner = document.getElementById('turnBanner');
     banner.innerHTML = '<span style="font-size:1.4rem;">'+p.animal.emoji+'</span> <b>'+p.animal.name+'팀</b> 차례예요!';
-    speak((first?'':'이제 ') + p.animal.name + '팀 차례예요! 윷을 던져주세요.');
+    await speak((first?'':'이제 ') + p.animal.name + '팀 차례예요! 윷을 던져주세요.');
   }
 
   function nextTurn(){
@@ -918,8 +928,8 @@
       var player = game.players[game.currentIdx];
 
       showToast(info.paws, info.label+'! '+info.steps+'칸 이동!', 1500);
-      speak(info.voice);
-      await delay(900);
+      await speak(info.voice);
+      await delay(500);
 
       var path = computePath(player.node, info.steps);
       for(var i=0;i<path.length;i++){
@@ -952,12 +962,12 @@
         confettiBurst(30);
         playFanfare();
         showToast(medal, player.animal.name+'팀 도착! '+player.finishRank+'등이에요!', 2200);
-        speak(player.animal.name+'팀이 도착했어요! '+player.finishRank+'등이에요! 축하해요!');
-        await delay(1000);
+        await speak(player.animal.name+'팀이 도착했어요! '+player.finishRank+'등이에요! 축하해요!');
+        await delay(600);
       } else if(captured){
         showToast('💥', player.animal.name+'팀이 '+captured.animal.name+'팀을 잡았다! 한 번 더!', 1800);
-        speak(player.animal.name+'팀이 '+captured.animal.name+'팀을 잡았어요! 한 번 더 던지세요!');
-        await delay(700);
+        await speak(player.animal.name+'팀이 '+captured.animal.name+'팀을 잡았어요! 한 번 더 던지세요!');
+        await delay(400);
       }
 
       renderTokens();
@@ -980,8 +990,8 @@
         renderStatusRow();
         renderTokens();
         showToast('🏁', '남은 팀이 한 팀밖에 없어서 게임을 종료합니다.', 2400);
-        speak('남은 팀이 한 팀밖에 없어서 게임을 종료합니다.');
-        await delay(2400);
+        await speak('남은 팀이 한 팀밖에 없어서 게임을 종료합니다.');
+        await delay(800);
         showEndScreen();
         return;
       }
@@ -989,7 +999,7 @@
       var extra = !reachedHome && (key==='yut' || key==='mo' || captured);
       if(!extra){
         nextTurn();
-        announceTurn(false);
+        await announceTurn(false);
       } else {
         renderStatusRow();
         var banner = document.getElementById('turnBanner');
